@@ -1,27 +1,122 @@
 {
-  "version": 1,
+  "version": 2,
   "curatedBy": "Ethan (via Arlo's diversification proposal, 2026-11-01)",
   "selection": "20 tasks: diversified across family (7 distinct), tag (all 3 Letta types + multi-tag), and task archetype (spreadsheet analysis / policy compliance / repo-issue / CLI / agent-policy). Duplicates resolved (one of each pair). Feedback-continuation prompts excluded.",
   "tasks": [
-    {"trajId": "t0072", "family": "agentic-mcp-sheets", "archetype": "spreadsheet-analysis", "note": "State of Fashion report: top-3 regions by beauty retail sales 2024"},
-    {"trajId": "t0124", "family": "agentic-mcp-sheets", "archetype": "spreadsheet-analysis", "note": "2027 EBITDA Brazil forecast sensitivity"},
-    {"trajId": "t0339", "family": "agentic-mcp-sheets", "archetype": "error-hunting", "note": "Find the Cost of Product / Cost of Software errors in the Accretion/Dilution model"},
-    {"trajId": "t0544", "family": "agentic-mcp-sheets", "archetype": "model-editing", "note": "Create a 2029E Net Income sensitivity table in the REIT model"},
-    {"trajId": "t0553", "family": "agentic-mcp-sheets", "archetype": "model-editing", "note": "Edit Valuation Summary tab: implied upside/downside"},
-    {"trajId": "t0125", "family": "agentic-mcp-sheets", "archetype": "policy-compliance", "note": "Magnolia Gardens template compliance review (picked over t0288 duplicate)"},
-    {"trajId": "t0596", "family": "agentic-mcp-sheets", "archetype": "document-analysis", "note": "BDX AR25: FDA violation classification"},
-    {"trajId": "t0192", "family": "repo-work-conventions", "archetype": "repo-issue", "note": "ECS entity snapshot + rollback (picked over t0193 duplicate)"},
-    {"trajId": "t0397", "family": "repo-work-conventions", "archetype": "maintainer-ask", "note": "Maintainer change via ask_user MCP"},
-    {"trajId": "t0720", "family": "repo-work-conventions", "archetype": "maintainer-ask", "note": "Second maintainer-ask scenario"},
-    {"trajId": "t0195", "family": "repo-work-conventions", "archetype": "agent-policy", "note": "ITSM Assistant Policy scenario"},
-    {"trajId": "t0007", "family": "unassigned", "archetype": "repo-issue", "note": "Bandit injection checks: string literal limitation"},
-    {"trajId": "t0157", "family": "unassigned", "archetype": "repo-issue", "note": "Anko dynamic typing: type constraint mechanism"},
-    {"trajId": "t0443", "family": "unassigned", "archetype": "repo-issue", "note": "Query(doc interface{}, path) interface implementation"},
-    {"trajId": "t0414", "family": "unassigned", "archetype": "repo-issue", "note": "RabbitMQ dead letter exchange + TTL routing"},
-    {"trajId": "t0663", "family": "unassigned", "archetype": "cli-exact-interface", "note": "MLflow interfaces under /testbed (exact signature match)"},
-    {"trajId": "t0505", "family": "word2vec-pipeline", "archetype": "cli-exact-interface", "note": "Word2Vec reusable component (NLTK+Gensim)"},
-    {"trajId": "t0174", "family": "algotune-optimization", "archetype": "performance-optimization", "note": "pandas benchmark runtime optimization"},
-    {"trajId": "t0251", "family": "unassigned", "archetype": "spreadsheet-analysis", "note": "WACC for Golden Everest, reply in chat (memory: answers-in-chat + rounding rules apply)"},
-    {"trajId": "t0019", "family": "unassigned", "archetype": "spreadsheet-analysis", "note": "Renewal/churn seat-change analysis (memory: tab_index + report-only-acted-on rules apply)"}
-  ]
+    {
+      "trajId": "t0072",
+      "family": "agentic-mcp-sheets",
+      "archetype": "spreadsheet-analysis",
+      "note": "State of Fashion report: top-3 regions by beauty retail sales 2024"
+    },
+    {
+      "trajId": "t0544",
+      "family": "agentic-mcp-sheets",
+      "archetype": "model-editing",
+      "note": "Create a 2029E Net Income sensitivity table in the REIT model"
+    },
+    {
+      "trajId": "t0553",
+      "family": "agentic-mcp-sheets",
+      "archetype": "model-editing",
+      "note": "Edit Valuation Summary tab: implied upside/downside"
+    },
+    {
+      "trajId": "t0125",
+      "family": "agentic-mcp-sheets",
+      "archetype": "policy-compliance",
+      "note": "Magnolia Gardens template compliance review (picked over t0288 duplicate)"
+    },
+    {
+      "trajId": "t0596",
+      "family": "agentic-mcp-sheets",
+      "archetype": "document-analysis",
+      "note": "BDX AR25: FDA violation classification"
+    },
+    {
+      "trajId": "t0192",
+      "family": "repo-work-conventions",
+      "archetype": "repo-issue",
+      "note": "ECS entity snapshot + rollback (picked over t0193 duplicate)"
+    },
+    {
+      "trajId": "t0397",
+      "family": "repo-work-conventions",
+      "archetype": "maintainer-ask",
+      "note": "Maintainer change via ask_user MCP"
+    },
+    {
+      "trajId": "t0195",
+      "family": "repo-work-conventions",
+      "archetype": "agent-policy",
+      "note": "ITSM Assistant Policy scenario"
+    },
+    {
+      "trajId": "t0007",
+      "family": "unassigned",
+      "archetype": "repo-issue",
+      "note": "Bandit injection checks: string literal limitation"
+    },
+    {
+      "trajId": "t0157",
+      "family": "unassigned",
+      "archetype": "repo-issue",
+      "note": "Anko dynamic typing: type constraint mechanism"
+    },
+    {
+      "trajId": "t0443",
+      "family": "unassigned",
+      "archetype": "repo-issue",
+      "note": "Query(doc interface{}, path) interface implementation"
+    },
+    {
+      "trajId": "t0414",
+      "family": "unassigned",
+      "archetype": "repo-issue",
+      "note": "RabbitMQ dead letter exchange + TTL routing"
+    },
+    {
+      "trajId": "t0663",
+      "family": "unassigned",
+      "archetype": "cli-exact-interface",
+      "note": "MLflow interfaces under /testbed (exact signature match)"
+    },
+    {
+      "trajId": "t0505",
+      "family": "word2vec-pipeline",
+      "archetype": "cli-exact-interface",
+      "note": "Word2Vec reusable component (NLTK+Gensim)"
+    },
+    {
+      "trajId": "t0174",
+      "family": "algotune-optimization",
+      "archetype": "performance-optimization",
+      "note": "pandas benchmark runtime optimization"
+    },
+    {
+      "trajId": "t0251",
+      "family": "unassigned",
+      "archetype": "spreadsheet-analysis",
+      "note": "WACC for Golden Everest, reply in chat (memory: answers-in-chat + rounding rules apply)"
+    },
+    {
+      "trajId": "t0019",
+      "family": "unassigned",
+      "archetype": "spreadsheet-analysis",
+      "note": "Renewal/churn seat-change analysis (memory: tab_index + report-only-acted-on rules apply)"
+    },
+    {
+      "trajId": "t0188",
+      "family": "unassigned",
+      "archetype": "repo-issue",
+      "note": "REPLACEMENT (Arlo judgment): repo-issue PASS 55 steps"
+    },
+    {
+      "trajId": "t0611",
+      "family": "unassigned",
+      "archetype": "performance-optimization",
+      "note": "REPLACEMENT (Arlo judgment): perf PASS 45 steps"
+    }
+  ],
+  "revisionNote": "2026-11-01: Arlo revision per Ethan's 'use your best judgement': -3 flagged (t0124, t0339, t0720), +2 replacements (t0188, t0611 \u2014 both PASS trajectories with recorded verifier evidence), t0157/t0397 kept (honest container-required specs)."
 }
