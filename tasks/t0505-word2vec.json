@@ -3,7 +3,10 @@
   "trajId": "t0505",
   "family": "word2vec-pipeline",
   "archetype": "cli-exact-interface",
-  "tags": ["task", "environment"],
+  "tags": [
+    "task",
+    "environment"
+  ],
   "title": "Reusable Word2Vec text-processing component",
   "sourceTrajectory": {
     "outcome": "FAIL",
@@ -18,24 +21,81 @@
       "preprocessing: ALPHANUMERIC = re.compile('[\\W_]+') per-text substitution then lowercase, split()",
       "stopwords default: nltk.corpus.stopwords.words('english'), downloaded with quiet=True",
       "training params: vector_size=100, window=5, min_count=1 (single-occurrence words MUST get vectors), workers=4",
-      "empty input: return untrained Word2Vec(vector_size=100) — never raise (the 10-run failure)"
-    ]
+      "empty input: return untrained Word2Vec(vector_size=100) \u2014 never raise (the 10-run failure)"
+    ],
+    "setupScript": "pip install --break-system-packages gensim nltk && python3 -c \"import nltk; nltk.download('stopwords', quiet=True)\""
   },
   "verifier": {
     "type": "python-asserts",
     "checks": [
-      {"name": "module_imports", "spec": "import solution; solution.task_func callable"},
-      {"name": "interface_contract", "spec": "task_func(texts: list[str], stopwords=None) -> Word2Vec; module constant ALPHANUMERIC exists"},
-      {"name": "empty_input_no_raise", "spec": "task_func([]) returns a Word2Vec instance without raising (THE memory-dependent case: 10/10 no-memory runs died here)"},
-      {"name": "untrained_return_on_empty", "spec": "the returned model for empty input has no trained vocabulary (build_vocab/train never called with sentences)"},
-      {"name": "preprocessing_convention", "spec": "task_func(['Hello-World!!']) trains on tokens [hello, world] (alphanumeric split, lowercased)"},
-      {"name": "stopword_default", "spec": "task_func(['the quick brown fox']) excludes nltk English stopwords from the vocabulary"},
-      {"name": "single_occurrence_words", "spec": "a word appearing once in a small corpus still has a vector (min_count=1)"},
-      {"name": "custom_stopwords", "spec": "stopwords=['quick'] argument excludes that token"}
+      {
+        "name": "module_imports",
+        "spec": "import solution; solution.task_func callable",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      },
+      {
+        "name": "interface_contract",
+        "spec": "task_func(texts: list[str], stopwords=None) -> Word2Vec; module constant ALPHANUMERIC exists",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      },
+      {
+        "name": "empty_input_no_raise",
+        "spec": "task_func([]) returns a Word2Vec instance without raising (THE memory-dependent case: 10/10 no-memory runs died here)",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      },
+      {
+        "name": "untrained_return_on_empty",
+        "spec": "the returned model for empty input has no trained vocabulary (build_vocab/train never called with sentences)",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      },
+      {
+        "name": "preprocessing_convention",
+        "spec": "task_func(['Hello-World!!']) trains on tokens [hello, world] (alphanumeric split, lowercased)",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      },
+      {
+        "name": "stopword_default",
+        "spec": "task_func(['the quick brown fox']) excludes nltk English stopwords from the vocabulary",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      },
+      {
+        "name": "single_occurrence_words",
+        "spec": "a word appearing once in a small corpus still has a vector (min_count=1)",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      },
+      {
+        "name": "custom_stopwords",
+        "spec": "stopwords=['quick'] argument excludes that token",
+        "command": "python3 check_t0505.py",
+        "asset": "check_t0505.py",
+        "locallyVerified": true,
+        "localVerification": "check logic verified 2026-11-01: informed reference solution (recorded PASS-run conventions from memoryDependentFacts) passes all 8; naive variant (whitespace split, keeps case, gensim default min_count, raises on empty) fails 7 of 8"
+      }
     ]
   },
   "memoryDependency": {
-    "withoutMemory": "the conventions (preprocessing regex, stopwords source, min_count=1, empty-input behavior) are UNSTATED in the prompt — 'this task's established preprocessing conventions' is the deliberate vagueness; agent must guess or fail",
+    "withoutMemory": "the conventions (preprocessing regex, stopwords source, min_count=1, empty-input behavior) are UNSTATED in the prompt \u2014 'this task's established preprocessing conventions' is the deliberate vagueness; agent must guess or fail",
     "withMemory": "memory's word2vec-pipeline family carries the exact conventions from the train trajectories + the known-failures entry for empty input"
   }
 }

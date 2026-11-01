@@ -1,0 +1,51 @@
+[
+  {
+    "task": "t0188",
+    "grader": "go test ./... (authored contract test)",
+    "informed": {
+      "exit_code": 0,
+      "pass": true,
+      "failing_checks": [],
+      "output_tail": "ok  \tlabelsort\t(cached)\n"
+    },
+    "naive": {
+      "exit_code": 1,
+      "pass": false,
+      "failing_checks": [
+        "TestClassOrderFull",
+        "TestNumericForms",
+        "TestDurationsAndBytes",
+        "TestSemverPrefixAndFallback",
+        "TestIPAndCIDR",
+        "TestBigPrecisionNoLoss"
+      ],
+      "output_tail": "--- FAIL: TestIPAndCIDR (0.00s)\n    labelsort_contract_test.go:152: pos 1: got [1.2.3.4 10.0.0.0/8 10.0.0.0/16 10.0.0.0/24 ::1 ::ffff:1.2.3.4] want [1.2.3.4 ::1 ::ffff:1.2.3.4 10.0.0.0/8 10.0.0.0/16 10.0.0.0/24]\n--- FAIL: TestBigPrecisionNoLoss (0.00s)\n    labelsort_contract_test.go:162: precision lost: \"1e30\" must sort before \"1.0000000000000000000000000000001e30\"\nFAIL\nFAIL\tlabelsort\t0.002s\nFAIL\n"
+    },
+    "discriminates": true
+  },
+  {
+    "task": "t0611",
+    "grader": "verifier-check.py (authored contract script)",
+    "informed": {
+      "exit_code": 0,
+      "pass": true,
+      "failing_checks": [],
+      "output_tail": "ASS checksum_mismatch_treated_as_corruption\nPASS cli_flags\nPASS corrupt_cache_warns_and_rescans\nPASS deleted_file_cleaned_from_cache\nPASS first_save_writes_backup_and_meta\nPASS keyboard_interrupt_saves_partial_cache\nPASS missing_cache_is_silent\nPASS reuse_on_second_run\nPASS settings_change_triggers_rescan\nPASS transitive_invalidation\nPASS vulture_version_change_triggers_rescan\n\nAll checks passed.\n"
+    },
+    "naive": {
+      "exit_code": 1,
+      "pass": false,
+      "failing_checks": [
+        "checksum_mismatch_treated_as_corruption",
+        "corrupt_cache_warns_and_rescans",
+        "deleted_file_cleaned_from_cache",
+        "first_save_writes_backup_and_meta",
+        "keyboard_interrupt_saves_partial_cache",
+        "reuse_on_second_run",
+        "transitive_invalidation"
+      ],
+      "output_tail": " no attribute 'get_cache_path'\nFAIL keyboard_interrupt_saves_partial_cache: AttributeError: module 'vulture.cache' has no attribute 'get_cache_path'\nPASS missing_cache_is_silent\nFAIL reuse_on_second_run: AssertionError: \nPASS settings_change_triggers_rescan\nFAIL transitive_invalidation: AssertionError: {'d.py', 'c.py', 'b.py', 'a.py'}\nPASS vulture_version_change_triggers_rescan\n\n7 check(s) FAILED\n"
+    },
+    "discriminates": true
+  }
+]

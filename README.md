@@ -38,11 +38,33 @@ The two are complementary, not competing.
 ## Status
 
 - [x] Name + repo
-- [ ] Stratified split (train/held-out) from the v1.1 corpus lineage
-- [ ] Train-only memory regeneration (zero tokens)
-- [ ] Held-out task shortlist with dependency tags (for Ethan to curate)
-- [ ] Runner (agent loop + bash tool, seeded memory, both arms)
-- [ ] Scorer (pass@1 delta, turn/token cost, per-tag breakdown)
+- [x] Stratified split (train/held-out) from the v1.1 corpus lineage (`docs/data-split.json`, seed 20261101)
+- [x] Train-only memory regeneration (zero tokens; `/tmp/train-only-mem`, regenerable per the split doc)
+- [x] Held-out task shortlist with dependency tags; v2 curation: 19 tasks, 3 unverifiable FAILs replaced by t0188 + t0611
+- [x] Runner (agent loop + bash tool, seeded memory, both arms) — `src/runner.py`, reuses the deepseek_driver loop in-process
+- [x] Scorer (pass@1 delta, turn/token cost, per-tag breakdown) — `src/eval.py`
+- [x] Both-ways verifier checks on the swapped tasks (t0188, t0611) — `src/naive_baseline.py`, `docs/naive-baseline-report.json`
+
+## Running the first eval
+
+```sh
+python3 src/eval.py --list      # what would run (no API spend)
+bun run eval                    # the first PAID eval: 3 READY tasks x 2 arms
+```
+
+`bun run eval` maps to `python3 src/eval.py --memory /tmp/train-only-mem --model deepseek-v4-flash`.
+READY tasks (locally verifiable without the task container): **t0505** (Word2Vec
+component, generic python), **t0611** (vulture cache, clone + `pip install -e .`),
+**t0188** (prometheus label comparator, standalone Go module with a pinned
+`CompareLabelValues` entry point). Everything else stays container-required and
+is recorded as skipped — never faked.
+
+Each task gets: a DeepSeek balance pre-flight (abort under $1.00 remaining),
+memory seeded by copying the folder into the workdir (the deepseek_driver
+contract), max 30 turns, and a 400k-token ceiling per task (breach aborts with
+`status=budget-aborted`). Results land in `docs/runs/<date>-eval/`
+(`results.json` + `report.md`: pass@1 by arm, delta, by-family, by-tag,
+per-task turns/tokens).
 
 ## Principles
 

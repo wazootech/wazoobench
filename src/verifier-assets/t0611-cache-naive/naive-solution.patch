@@ -1,0 +1,63 @@
+diff --git a/vulture/config.py b/vulture/config.py
+index 28f0ee5..c147749 100644
+--- a/vulture/config.py
++++ b/vulture/config.py
+@@ -169,6 +169,27 @@ def _parse_args(args=None):
+     parser.add_argument(
+         "-v", "--verbose", action="store_true", default=missing
+     )
++
++    parser.add_argument(
++        "--cache",
++        action="store_true",
++        default=missing,
++        help="Reuse analysis results for unchanged files.",
++    )
++    parser.add_argument(
++        "--cache-dir",
++        metavar="PATH",
++        type=str,
++        default=missing,
++        help="Cache directory (default: .vulture-cache/).",
++    )
++
++    parser.add_argument(
++        "--cache-clear",
++        action="store_true",
++        default=missing,
++        help="Clear the cache directory before analyzing files.",
++    )
+     parser.add_argument("--version", action="version", version=version)
+     namespace = parser.parse_args(args)
+     cli_args = {
+diff --git a/vulture/core.py b/vulture/core.py
+index ff354d4..dfe69d9 100644
+--- a/vulture/core.py
++++ b/vulture/core.py
+@@ -191,9 +191,12 @@ class Vulture(ast.NodeVisitor):
+     """Find dead code."""
+ 
+     def __init__(
+-        self, verbose=False, ignore_names=None, ignore_decorators=None
++        self, verbose=False, ignore_names=None, ignore_decorators=None,
++        cache_dir=None, cache_settings=None, cache_clear=False,
+     ):
+         self.verbose = verbose
++        self.cache_dir = cache_dir
++        self._cache_stats = {"scanned": set(), "reused": set()}
+ 
+         def get_list(typ):
+             return utils.LoggingList(typ, self.verbose)
+@@ -283,6 +286,8 @@ class Vulture(ast.NodeVisitor):
+                 continue
+ 
+             self._log("Scanning:", module)
++            import os as _os
++            self._cache_stats["scanned"].add(_os.path.abspath(module))
+             try:
+                 module_string = utils.read_file(module)
+             except utils.VultureInputException as err:
+diff --git a/vulture/cache.py b/vulture/cache.py
+new file mode 100644
+--- /dev/null
++++ b/vulture/cache.py

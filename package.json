@@ -1,0 +1,9 @@
+{
+  "name": "wazoobench",
+  "private": true,
+  "scripts": {
+    "eval": "python3 src/eval.py --memory /tmp/train-only-mem --model deepseek-v4-flash",
+    "eval:list": "python3 src/eval.py --list",
+    "baseline": "python3 src/naive_baseline.py"
+  }
+}
