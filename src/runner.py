@@ -206,7 +206,14 @@ def run_agent(
                     "content": f"exit_code={result['exit_code']}\n{result['output']}",
                 }
             )
-            if completion_marker and driver.find_completion_marker(result["output"], completion_marker):
+            # The completion marker means the AGENT chose to finish — the
+            # marker must appear in the agent's own tool-call COMMAND (echo
+            # COMPLETE_TASK...), never in the COMMAND'S OUTPUT. Tool output
+            # can contain the marker string incidentally: our first eval run
+            # had the agent `cat memory/MEMORY.md`, whose user-preferences
+            # section quotes the marker verbatim, and the run ended after 2
+            # turns as "completed" without the task being attempted.
+            if completion_marker and driver.find_completion_marker(command, completion_marker):
                 final = result["output"]
                 reason = "completion-marker"
                 break
