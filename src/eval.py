@@ -95,7 +95,17 @@ def run_task(spec: dict, arm: str, memory: Path | None, workdir: Path, model: st
         cmd += ["--memory", str(memory)]
     env = dict(os.environ)
     if not env.get("DEEPSEEK_API_KEY"):
-        env["DEEPSEEK_API_KEY"] = "sentinel"  # the proxy fills the real value
+        # "sentinel" only works when the subprocess rides the Skydive egress
+        # proxy (it stamps the real credential). The runner's balance check
+        # hit api.deepseek.com directly and got a 401 with the sentinel, so
+        # the eval now requires a real key in the environment.
+        print(
+            "eval: DEEPSEEK_API_KEY not set in environment; refusing to fall "
+            "back to a placeholder after the runner's balance check 401'd. "
+            "Export the key and rerun.",
+            file=sys.stderr,
+        )
+        return {"error": "missing DEEPSEEK_API_KEY"}
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if proc.returncode != 0:
         print(f"eval: runner failed for {spec['trajId']} arm={arm}: {proc.stderr[-500:]}", file=sys.stderr)
@@ -106,7 +116,7 @@ def run_task(spec: dict, arm: str, memory: Path | None, workdir: Path, model: st
 def summarize(results: list[dict]) -> dict:
     by_arm: dict[str, list[dict]] = {}
     for r in results:
-        by_arm.setdefault(r["arm"], []).append(r)
+        if "arm" in r: by_arm.setdefault(r["arm"], []).append(r)
 
     def pass_at_1(rows):
         done = [r for r in rows if not r.get("error")]
