@@ -1,0 +1,65 @@
+{
+ "id": "t0553-valuation-summary-edit",
+ "trajId": "t0553",
+ "family": "agentic-mcp-sheets",
+ "archetype": "model-editing",
+ "tags": [
+  "task"
+ ],
+ "title": "REIT model: Valuation Summary implied upside/downside table",
+ "sourceTrajectory": {
+  "outcome": "PASS",
+  "failures": "",
+  "goldMemoryRef": "environmentFacts: Golden Everest workbook path + Projections (C-Corp) tab_index 2 + peer comp workbook; userPreferences: percentages rounded to 2dp"
+ },
+ "prompt": "Edit the Valuation Summary tab of the REIT model, showing the implied upside/downside percentage for the Mid case of Scenario 1: Current Valuation.\n\n- EV/EBITDA multiple: use 50% and 55% of the average multiple for Data Center REITs on the Comparable Companies tab, excluding the highest and lowest companies by market cap.\n- Current trading price: two columns as 10% and 20% higher than the Strategic Offer share price.\n\nAssume revenue growth % is now 9% and EBITDA Margin % is now 41% for the entirety of the projection period and use 2029E EBITDA instead of 2025E EBITDA in the Mid case of Scenario 1: Current Valuation. Round the reported percentages to the nearest two decimal points.\n\n\n## Your working environment\n\nYou are working inside a simulated workplace that is exposed to you over MCP by the\n`world` server. The container you run in is intentionally empty — every document,\nspreadsheet, email, message and calendar entry for this task lives behind the `world`\nMCP tools, and any file you are asked to produce must be created through them.\n\nApplications available in this workspace: Calendar, Chat, Code Execution, Excel, Filesystem, Mail, PDFs, Powerpoint, Word.\n\nIf the `world` tools are not in your tool list yet, wait for the MCP server to finish\nconnecting and retry. An empty local filesystem is expected and never means the task\ndata is missing.\n\n\nYou are an agent that completes tasks independently. Use the tools provided to you to complete the task to the best of your ability. You should use the code_exec tool when needed, such as when calculating values. When calculating numbers, unless specified otherwise, use the exact values without rounding them.\n\nYou must attempt to execute the task. You cannot ask for help or further clarification.\n\nFor every tool except the code_exec tool, you may assume that all relevant files are located under the root path /. For the code_exec tool, however, you must explicitly use /filesystem/ as the root path to locate all relevant files.",
+ "environment": {
+  "container": "world MCP workplace container",
+  "setup": "world MCP server",
+  "memoryDependentFacts": [
+   "the container is intentionally empty; every document/workbook lives behind the world MCP tools",
+   "sheets read_tab requires a tab_index parameter, not a sheet name (train support 12-13)",
+   "openpyxl is not preinstalled in the code execution environment; pip install before loading workbooks (train support 17)",
+   "LibreOffice cannot run in the code execution sandbox (/proc not mounted), so workbooks are recalculated with a Python formula engine or manual computation (train support 4)",
+   "numbers are calculated with exact values without rounding unless the prompt specifies otherwise (train support 8)",
+   "workbook: /Financials/Golden_Everest_REIT_Analysis.xlsx; peer comps: /Peer Comps/Data Center REIT Peer Group.xlsx",
+   "peer average row range on Comparable Companies is E9:E11 after trimming highest/lowest by market cap"
+  ]
+ },
+ "verifier": {
+  "type": "workbook-cell-check",
+  "checks": [
+   {
+    "name": "projection_assumptions",
+    "spec": "Projections (C-Corp) tab C7:G8 set to 0.09 (revenue growth) and 0.41 (EBITDA margin) for all projection years, formatted 0.0%",
+    "locallyVerified": false,
+    "localVerification": "pinned verbatim from the recorded PASS set_cell operations; container readback required"
+   },
+   {
+    "name": "mid_case_multiple",
+    "spec": "Valuation Summary mid-case multiple cells use 50% and 55% of the trimmed peer average =AVERAGE('Comparable Companies'!E9:E11) (highest/lowest by market cap excluded), using 2029E EBITDA ('Projections (C-Corp)'!G19)",
+    "locallyVerified": false,
+    "localVerification": "formulas pinned from the recorded PASS operations; container required"
+   },
+   {
+    "name": "upside_downside_values",
+    "spec": "the implied upside/downside grid evaluates to 88.80% / 73.07% at the $51.43 price column (10% over Strategic Offer) and 110.91% / 93.34% at the $56.10 column (20% over), rounded to 2 dp as reported in the recorded PASS final message",
+    "locallyVerified": false,
+    "localVerification": "values match the recorded PASS final message; container recalculation required to confirm"
+   },
+   {
+    "name": "price_columns",
+    "spec": "H6==$C$20*1.10 and I6==$C$20*1.20 (the two \"higher than Strategic Offer\" trading-price columns)",
+    "locallyVerified": false,
+    "localVerification": "pinned from recorded PASS operations"
+   }
+  ]
+ },
+ "memoryDependency": {
+  "withoutMemory": "the workbook, the Comparable Companies tab row range, and the Strategic Offer share price cell exist only in the container; without memory the agent must reverse-engineer the Valuation Summary layout",
+  "withMemory": "memory pins the workbook path, the Projections (C-Corp) tab_index 2, the peer comp workbook (/Peer Comps/Data Center REIT Peer Group.xlsx), and the 2-dp percentage convention (train support 14)"
+ },
+ "concerns": [
+  "needs the world MCP container: formulas and values pinned from PASS evidence but only evaluable in the container workbook"
+ ]
+}

@@ -1,0 +1,76 @@
+{
+ "id": "t0397-sqlite-safe-import-plan",
+ "trajId": "t0397",
+ "family": "repo-work-conventions",
+ "archetype": "maintainer-ask",
+ "tags": [
+  "environment",
+  "task"
+ ],
+ "title": "sqlite-utils safe import checkpoints + invariants (maintainer-ask, FAIL)",
+ "sourceTrajectory": {
+  "outcome": "FAIL",
+  "failures": "",
+  "goldMemoryRef": "userPreferences: maintainer-ask protocol (ask_user plan-first, commit-each-pass, real ask_user review calls, iterate to approval); env: /tmp/base_commit.txt, Dev identity"
+ },
+ "prompt": "You're working in the repository at `/app`.\n\nA maintainer needs a change implemented.\n\n- Use the `ask_user` tool (MCP server at `http://user-server:8000/mcp`) to talk to the maintainer.\n- This step is only for understanding the request and agreeing on the plan. Do not make implementation edits in this step.\n- If they approve your plan, save it in `/tmp/plan.md`, then stop.\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\n**Read `/tmp/plan.md` first** - it is the plan you agreed with the maintainer in the previous step. Carry it out now in `/app`.\n\n- Make the minimal production-code and documentation changes needed to implement the agreed behavior.\n- Do not modify test files, test harness files, or anything under `/tests`.\n- Keep existing behavior intact except for the requested change.\n- Before editing, configure a local git identity if this repo does not already have one:\n\n```bash\ngit config user.name \"Dev\"\ngit config user.email \"dev@example.com\"\n```\n\n- Save the starting commit before your first implementation commit:\n\n```bash\ngit rev-parse HEAD > /tmp/base_commit.txt\n```\n\n- After each coherent implementation pass, commit the current repo changes before asking the maintainer for review. A coherent pass is the initial implementation, or a later revision made in response to maintainer feedback. Use short commit messages like `initial implementation` or `address feedback: parser behavior`.\n- The maintainer can inspect the repository state directly after your commit, so a concise review request is fine. Still make sure each coherent implementation pass is committed before calling `ask_user`.\n- Do not commit `/logs`, temporary investigation files, or unrelated generated files.\n- When you believe it is done, run focused validation that is practical in this environment, review the latest commit and working tree, then report the key changes to the maintainer via `ask_user`. If they ask for changes, make another coherent pass and commit it. If they say ship it, then finish.\n\nInteraction contract for this step:\n\n- A plain final answer asking for review does not count as contacting the maintainer.\n- After committing the implementation, your next action MUST be an actual `ask_user`\n  MCP tool call containing the review request. Do not stop immediately after writing the\n  review request as assistant text.\n- Continue the live `ask_user` exchange, addressing one requested change at a time and\n  committing each coherent revision, until the maintainer explicitly approves or says\n  to ship it. Only then may this step finish.\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\nThis is a handoff step. Do not make intentional implementation changes.\n\nSave the local commit history for handoff:\n\n```bash\nset -euo pipefail\ncd /app\nmkdir -p /logs/agent\nbase=\"$(cat /tmp/base_commit.txt)\"\n\n{\n  echo \"Base commit: $base\"\n  echo\n  echo \"Commits:\"\n  git log --oneline --reverse \"$base\"..HEAD\n  echo\n  echo \"Patches:\"\n  git log --patch --reverse --find-renames \"$base\"..HEAD\n} > /logs/agent/change-log.txt\n\ngit status --short > /logs/agent/final-status.txt\ngit diff \"$base\"..HEAD > /logs/agent/final.diff\n```\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\nNow add tests for the implementation changes you made. Keep the test changes in a separate commit, then hand off.\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\nThis is the final handoff step. Do not make intentional implementation changes.\n\nSave the local status for handoff:\n\n```bash\nset -euo pipefail\ncd /app\nmkdir -p /logs/agent\ngit status --short > /logs/agent/test-handoff-status.txt\n```",
+ "environment": {
+  "container": "sqlite-utils repo at /app + user-server MCP (ask_user)",
+  "setup": "repo checked out at /app; no git author identity configured (must set repo-local identity before committing)",
+  "memoryDependentFacts": [
+   "user requires working on a new branch created from main (train support 118)",
+   "no Git author identity is configured; a repo-local identity is required to commit (train support 4-8)",
+   "user requires committing all changes when the work is done (train support 4-5)",
+   "user forbids committing /logs, temporary investigation files, or unrelated generated files (train support 9)",
+   "network access to GitHub is blocked inside the task environment (train evidence)",
+   "use the ask_user tool on the MCP server at http://user-server:8000/mcp to talk to the maintainer (train support 2)",
+   "each coherent implementation pass is committed (short message) before calling ask_user, and the next action after committing must be an actual ask_user MCP call (train support 15/3)",
+   "after committing, the next action must be an actual ask_user MCP call containing the review request, not assistant text (train support 3)",
+   "continue the live ask_user exchange, one requested change at a time, committing each revision, until the maintainer explicitly approves or says ship it (train support 1)",
+   "do not spawn sub-agents unless explicitly asked (train support 44)"
+  ]
+ },
+ "verifier": {
+  "type": "agent-policy-behavioral",
+  "checks": [
+   {
+    "name": "phase1_plan_only",
+    "spec": "in the plan phase the agent uses mcp__user_server__ask_user to understand the request and agree on a plan, makes NO implementation edits, and on approval saves the plan to /tmp/plan.md then stops",
+    "locallyVerified": false,
+    "localVerification": "behavioral; graded in container"
+   },
+   {
+    "name": "ask_user_exchange_contract",
+    "spec": "the plan must absorb the maintainer corrections: checkpoint-as-rollback-boundary (no resume metadata); table-scoped truthy invariant assertions with add_import_invariant/remove_import_invariant/list_import_invariants/validate_import_invariants; checkpoint lifecycle enable_safe_import/disable_safe_import/create_import_checkpoint/rollback_to_checkpoint/commit_checkpoint/cleanup_checkpoint with SafeImportNotEnabledError/CheckpointNotActiveError/CheckpointNotFoundError, connection-local state, strict LIFO; Database-level safe_bulk_insert/safe_bulk_upsert/import_csv/import_json with strict reserved for raise-on-failure; --safe-mode (not --safe) on CLI insert/upsert/bulk; validate-import-invariants exits 0 even on failure; enable-safe-import/disable-safe-import CLI commands",
+    "locallyVerified": false,
+    "localVerification": "contract pinned from the recorded ask_user feedback messages; container-required"
+   },
+   {
+    "name": "implementation_phase",
+    "spec": "carry out /tmp/plan.md with minimal production+docs changes, no test/harness file edits, git identity Dev/dev@example.com, base commit saved to /tmp/base_commit.txt; add the maintainer-requested committed regression tests only after explicit override; keep test changes in a separate commit; final handoff artifacts written per the harness prompts",
+    "locallyVerified": false,
+    "localVerification": "behavioral; container-required"
+   },
+   {
+    "name": "ship_only_on_approval",
+    "spec": "implementation revisions are committed and presented via a real ask_user call; the run stops (or hands off) only after the maintainer approves; no version bump unless the maintainer asks (the recorded maintainer said keep pyproject.toml at 4.0a1)",
+    "locallyVerified": false,
+    "localVerification": "behavioral; container-required"
+   },
+   {
+    "name": "expected_outcome",
+    "spec": "UNRESOLVED: the recorded run followed the protocol through final handoff and still graded FAIL with no verifier feedback; the discriminating criterion is not recoverable from the corpus",
+    "locallyVerified": false,
+    "localVerification": "not verifiable from the corpus"
+   }
+  ]
+ },
+ "memoryDependency": {
+  "withoutMemory": "the maintainer-ask protocol (ask_user before edits, commit-each-pass, real ask_user review calls, iterate until approval) is entirely memory-carried; without it agents either edit first or never call ask_user again after committing",
+  "withMemory": "repo-work-conventions memory carries the full maintainer-ask protocol (support 15/3/2/1 items) plus the Dev identity and /tmp/base_commit.txt conventions"
+ },
+ "concerns": [
+  "REPLACEMENT CANDIDATE: FAIL with no verifier feedback; the behavioral checks are protocol rules from the prompts + maintainer feedback, but the actual graded criterion is unknown",
+  "requires the user-server MCP container for ask_user"
+ ]
+}

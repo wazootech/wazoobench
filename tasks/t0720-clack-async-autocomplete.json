@@ -1,0 +1,70 @@
+{
+ "id": "t0720-clack-async-autocomplete",
+ "trajId": "t0720",
+ "family": "repo-work-conventions",
+ "archetype": "maintainer-ask",
+ "tags": [
+  "environment",
+  "task"
+ ],
+ "title": "Clack AutocompletePrompt async options (maintainer-ask, FAIL)",
+ "sourceTrajectory": {
+  "outcome": "FAIL",
+  "failures": "",
+  "goldMemoryRef": "userPreferences: maintainer-ask protocol; maintainer feedback rules for autocomplete async lifecycle (train items overlap)"
+ },
+ "prompt": "You're working in the repository at `/app`.\n\nA maintainer needs a change implemented.\n\n- Use the `ask_user` tool (MCP server at `http://user-server:8000/mcp`) to talk to the maintainer.\n- This step is only for understanding the request and agreeing on the plan. Do not make implementation edits in this step.\n- If they approve your plan, save it in `/tmp/plan.md`, then stop.\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\n**Read `/tmp/plan.md` first** - it is the plan you agreed with the maintainer in the previous step. Carry it out now in `/app`.\n\n- Make the minimal production-code and documentation changes needed to implement the agreed behavior.\n- Do not modify test files, test harness files, or anything under `/tests`.\n- Keep existing behavior intact except for the requested change.\n- Before editing, configure a local git identity if this repo does not already have one:\n\n```bash\ngit config user.name \"Dev\"\ngit config user.email \"dev@example.com\"\n```\n\n- Save the starting commit before your first implementation commit:\n\n```bash\ngit rev-parse HEAD > /tmp/base_commit.txt\n```\n\n- After each coherent implementation pass, commit the current repo changes before asking the maintainer for review. A coherent pass is the initial implementation, or a later revision made in response to maintainer feedback. Use short commit messages like `initial implementation` or `address feedback: parser behavior`.\n- The maintainer can inspect the repository state directly after your commit, so a concise review request is fine. Still make sure each coherent implementation pass is committed before calling `ask_user`.\n- Do not commit `/logs`, temporary investigation files, or unrelated generated files.\n- When you believe it is done, run focused validation that is practical in this environment, review the latest commit and working tree, then report the key changes to the maintainer via `ask_user`. If they ask for changes, make another coherent pass and commit it. If they say ship it, then finish.\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\nThis is a handoff step. Do not make intentional implementation changes.\n\nSave the local commit history for handoff:\n\n```bash\nset -euo pipefail\ncd /app\nmkdir -p /logs/agent\nbase=\"$(cat /tmp/base_commit.txt)\"\n\n{\n  echo \"Base commit: $base\"\n  echo\n  echo \"Commits:\"\n  git log --oneline --reverse \"$base\"..HEAD\n  echo\n  echo \"Patches:\"\n  git log --patch --reverse --find-renames \"$base\"..HEAD\n} > /logs/agent/change-log.txt\n\ngit status --short > /logs/agent/final-status.txt\ngit diff \"$base\"..HEAD > /logs/agent/final.diff\n```\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\nNow add tests for the implementation changes you made. Keep the test changes in a separate commit, then hand off.\n\n===== next harness instruction =====\n\nYou're working in the repository at `/app`.\n\nThis is the final handoff step. Do not make intentional implementation changes.\n\nSave the local status for handoff:\n\n```bash\nset -euo pipefail\ncd /app\nmkdir -p /logs/agent\ngit status --short > /logs/agent/test-handoff-status.txt\n```",
+ "environment": {
+  "container": "Clack monorepo at /app + user-server MCP (ask_user)",
+  "setup": "repo checked out at /app; no git author identity configured (must set repo-local identity before committing)",
+  "memoryDependentFacts": [
+   "user requires working on a new branch created from main (train support 118)",
+   "no Git author identity is configured; a repo-local identity is required to commit (train support 4-8)",
+   "user requires committing all changes when the work is done (train support 4-5)",
+   "user forbids committing /logs, temporary investigation files, or unrelated generated files (train support 9)",
+   "network access to GitHub is blocked inside the task environment (train evidence)",
+   "use the ask_user tool on the MCP server at http://user-server:8000/mcp to talk to the maintainer (train support 2)",
+   "each coherent implementation pass is committed (short message) before calling ask_user, and the next action after committing must be an actual ask_user MCP call (train support 15/3)",
+   "after committing, the next action must be an actual ask_user MCP call containing the review request, not assistant text (train support 3)",
+   "continue the live ask_user exchange, one requested change at a time, committing each revision, until the maintainer explicitly approves or says ship it (train support 1)",
+   "do not spawn sub-agents unless explicitly asked (train support 44)"
+  ]
+ },
+ "verifier": {
+  "type": "agent-policy-behavioral",
+  "checks": [
+   {
+    "name": "phase1_plan_only",
+    "spec": "same maintainer-ask protocol as the sqlite-utils plan task: ask_user plan phase, no implementation edits, save approved plan to /tmp/plan.md, stop",
+    "locallyVerified": false,
+    "localVerification": "behavioral; container-required"
+   },
+   {
+    "name": "agreed_feature_set",
+    "spec": "the plan must cover the features the maintainer requested in sequence: async resolvers without breaking static arrays or sync resolvers; thenable detection by invoking the resolver once (no instanceof Promise, no double call); options(search, { signal }) resolver context with AbortSignal; debounceMs (100-300ms default) with superseding-cancel; cacheResults/cache with clearCache(); staleWhileRevalidate (serve cached, keep loading, background refetch); minSearchLength with searchTooShort flag and wrapper \"Type at least N characters\" message; retry support maxRetries/retryDelay/retryBackoff linear|exponential with public retryCount; fallbackOptions on exhausted retries; loadingMinDuration measured from fetch start with a monotonic clock (performance.now(), not Date.now()); loadingMessage/noResultsMessage overrides; public state named loading (not isLoading); sync resolvers settle immediately even with async lifecycle options, including throws",
+    "locallyVerified": false,
+    "localVerification": "feature list pinned verbatim from the recorded maintainer feedback messages; container-required"
+   },
+   {
+    "name": "implementation_and_handoff",
+    "spec": "minimal production+docs changes, no test edits (until override), Dev identity, base commit saved, commits per pass with real ask_user review calls, test commit separate, handoff artifacts per the harness prompts",
+    "locallyVerified": false,
+    "localVerification": "behavioral; container-required"
+   },
+   {
+    "name": "expected_outcome",
+    "spec": "UNRESOLVED: the recorded run addressed every maintainer correction through the sync-compatibility edge cases and still graded FAIL with no verifier feedback",
+    "locallyVerified": false,
+    "localVerification": "not verifiable from the corpus"
+   }
+  ]
+ },
+ "memoryDependency": {
+  "withoutMemory": "same maintainer-ask protocol dependency as the sqlite-utils plan task; additionally the wrapper/core API split conventions are repo-specific and unstated",
+  "withMemory": "repo-work-conventions memory carries the maintainer-ask protocol; dream also holds related clack-autocomplete maintainer rules from train trajectories (debounceMs default range, thenable detection, monotonic timing), which match this task's feedback"
+ },
+ "concerns": [
+  "REPLACEMENT CANDIDATE: FAIL with no verifier feedback; also the longest trajectory in the curated set (414 steps), which strains eval budget",
+  "requires the user-server MCP container for ask_user"
+ ]
+}
