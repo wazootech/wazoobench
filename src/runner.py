@@ -124,6 +124,7 @@ def run_agent(
     ]
     usage = {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0}
     bash_outputs: list[dict] = []
+    memory_use: list[dict] = []  # evidence the agent USED the memory, not just read it
     steps: list[dict] = []
     final = ""
     reason = "max-turns"
@@ -181,6 +182,10 @@ def run_agent(
             bash_outputs.append(
                 {"command": command, "exit_code": result["exit_code"], "output": result["output"]}
             )
+            # memory-USE evidence: commands touching a skill file (the index's
+            # pointers), not just the entry file
+            if "memory/skills/" in command or ("skills/" in command and "memory" in command):
+                memory_use.append({"kind": "skill-open", "command": command[:200]})
             steps.append(
                 {
                     "source": "tool",
@@ -229,6 +234,8 @@ def run_agent(
         "turns": len(steps),
         "tokens": usage,
         "memory_seeded": bool(memory_dir),
+        "memory_use_events": memory_use,
+        "transcript": messages,
     }
 
 
