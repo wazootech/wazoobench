@@ -111,14 +111,16 @@ def run_task(spec: dict, arm: str, memory: Path | None, workdir: Path, model: st
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if proc.returncode != 0:
         print(f"eval: runner failed for {spec['trajId']} arm={arm}: {proc.stderr[-500:]}", file=sys.stderr)
-        return {"error": proc.stderr[-2000:]}
+        return {"taskId": spec["trajId"], "arm": arm, "passed": False, "status": "runner-error",
+                "error": proc.stderr[-2000:], "turns": 0, "tokens": {}, "seconds": 0,
+                "checks": [], "memoryUsed": arm == "memory"}
     return json.loads(out.read_text())
 
 
 def summarize(results: list[dict]) -> dict:
     by_arm: dict[str, list[dict]] = {}
     for r in results:
-        if "arm" in r: by_arm.setdefault(r["arm"], []).append(r)
+        if "arm" in r and "taskId" in r: by_arm.setdefault(r["arm"], []).append(r)
 
     def pass_at_1(rows):
         done = [r for r in rows if not r.get("error")]
