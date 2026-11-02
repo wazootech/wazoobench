@@ -1,0 +1,1 @@
+/home/user/workspace/wazoobench/test/.tmp-validate/symlink/MEMORY.md

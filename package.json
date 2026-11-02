@@ -4,6 +4,16 @@
   "scripts": {
     "eval": "python3 src/eval.py --memory /tmp/train-only-mem --model deepseek-v4-flash",
     "eval:list": "python3 src/eval.py --list",
-    "baseline": "python3 src/naive_baseline.py"
+    "baseline": "python3 src/naive_baseline.py",
+    "memory": "bun run src/memory-index.ts"
+  },
+  "dependencies": {
+    "@wazoo/sparql-engine": "npm:@jsr/wazoo__sparql-engine@^0.4.2",
+    "@worlds/sdk": "npm:@jsr/worlds__sdk@^0.9.0",
+    "@worlds/sqlite": "npm:@jsr/worlds__sqlite@^0.7.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.14",
+    "typescript": "^5.9.3"
   }
 }

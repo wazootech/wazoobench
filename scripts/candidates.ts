@@ -18,7 +18,7 @@ for (const dir of await Array.fromAsync(new Bun.Glob("*.json*").scan({ cwd: corp
 }
 const held = new Set(split.heldOut)
 const famOf = new Map<string, string>()
-for (const [fam, v] of Object.entries(split.byFamily)) for (const t of v.heldOut) famOf.set(t, fam)
+for (const [fam, famSplit] of Object.entries(split.byFamily as Record<string, { train: string[]; heldOut: string[] }>)) for (const t of famSplit.heldOut) famOf.set(t, fam)
 
 // task prompt heuristics per format (ATIF: first user step with real length;
 // jsonl: first response_item user message; opencode: first user message)
