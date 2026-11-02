@@ -485,7 +485,7 @@ def main(argv: list[str] | None = None) -> int:
                 "full_entry_chars": len((memory_source / driver.ENTRY_FILE).read_text()),
                 "retained_chars": len(presenter),
                 "sections_kept": [t for t, _ in family_sections(
-                    (memory_dir / driver.ENTRY_FILE).read_text(), resolve_family_id(spec)
+                    (memory_source / driver.ENTRY_FILE).read_text(), resolve_family_id(spec)
                 )],
             }
 
