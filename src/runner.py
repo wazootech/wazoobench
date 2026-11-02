@@ -430,6 +430,7 @@ def main(argv: list[str] | None = None) -> int:
     # (b) seed memory by copying the folder into the workdir.
     memory_dir = None
     memory_used = False
+    memory_stats: dict = {}
     if args.arm == "memory":
         memory_source = Path(args.memory) if args.memory else None
         if args.memory_mode == "inline":
@@ -464,7 +465,6 @@ def main(argv: list[str] | None = None) -> int:
                         file=sys.stderr,
                     )
                     return 2
-        memory_stats: dict = {}
         if args.arm == "memory" and args.memory_mode == "family":
             memory_stats = prune_memory_folder(memory_dir, resolve_family_id(spec))
             print(
@@ -511,6 +511,8 @@ def main(argv: list[str] | None = None) -> int:
     except BudgetAbort:
         run = {"status": "budget-aborted"}
     except Exception as exc:  # noqa: BLE001 - surface, don't fake
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         run = {"status": "agent-error", "final_message": "", "bash_outputs": [], "steps": [],
                "turns": 0, "tokens": {}, "memory_seeded": memory_used, "error": str(exc)}
     run["seconds"] = round(time.monotonic() - started, 1)
