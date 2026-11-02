@@ -1,0 +1,11 @@
+{
+  "dapt-pcap-network-stats": "DAPT pcap network stats",
+  "word2vec-pipeline": "Word2Vec pipeline builder",
+  "algotune-optimization": "Solver speedup optimization",
+  "arc-grid-transforms": "ARC grid transforms",
+  "dbt-data-eng": "dbt data engineering",
+  "analytics-bixbench": "BixBench bioinformatics analytics",
+  "agentic-mcp-sheets": "Agentic MCP workplace (world server)",
+  "skillsbench-ops": "SkillsBench ops tasks",
+  "repo-work-conventions": "Repo work conventions"
+}

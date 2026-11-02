@@ -240,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    out_dir = RUNS / f"{date}-eval"
+    out_dir = RUNS / (f"{date}-eval" if args.memory_mode == "folder" else f"{date}-eval-{args.memory_mode}")
     out_dir.mkdir(parents=True, exist_ok=True)
     results: list[dict] = []
     for index, (spec, _why) in enumerate(ready, start=1):
@@ -264,6 +264,8 @@ def main(argv: list[str] | None = None) -> int:
                               workdir, args.model, result_path,
                               args.max_turns, args.token_ceiling,
                               memory_mode=args.memory_mode)
+            if arm == "memory" and args.memory_mode != "folder":
+                result["arm"] = f"memory-{args.memory_mode}"
             results.append(result)
             (out_dir / "results.json").write_text(json.dumps(results, indent=2))
     (out_dir / "report.md").write_text(

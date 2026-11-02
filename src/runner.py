@@ -226,31 +226,38 @@ def run_agent(
     max_turns: int = 30,
     token_ceiling: int = DEFAULT_TOKEN_CEILING,
     completion_marker: str = DEFAULT_COMPLETION_MARKER,
-    memory_mode: str = "folder",
+    memory_mode: str = "pointer",
     memory_stats: dict | None = None,
+    memory_source: Path | None = None,
 ) -> dict:
     """The deepseek_driver loop, in-process, with a token ceiling."""
     instruction = spec["prompt"]
-    system_prompt = driver.SYSTEM_PROMPT.format(
-        memory=str(memory_dir) if memory_dir else "(none)", entry=driver.ENTRY_FILE
-    )
-    if memory_dir:
-        memory_note = driver.MEMORY_PROMPT.format(memory=memory_dir, entry=memory_dir / driver.ENTRY_FILE)
-        entry_text = (memory_dir / driver.ENTRY_FILE).read_text()
-    else:
-        memory_note = driver.NO_MEMORY_PROMPT
-        entry_text = ""
-    system_prompt = system_prompt + "\n\n" + memory_note
     presenter = ""
-    if memory_mode == "inline" and memory_dir:
-        # presenter model: skip the full entry-text dump, inject the relevant
-        # sections directly instead
-        presenter = inline_presenter_block(memory_dir, resolve_family_id(spec))
-        if presenter:
+    if memory_mode == "inline":
+        # presenter model: rules injected directly; no folder exists, so no
+        # pointer in the prompt (pointing at "(none)" would contradict the
+        # injected rules).
+        if memory_source is not None:
+            presenter = inline_presenter_block(memory_source, resolve_family_id(spec))
+        system_prompt = driver.SYSTEM_PROMPT.format(memory="(injected below)", entry="(injected below)")
+        system_prompt += "\n\n=== MEMORY RULES — distilled from similar past tasks; follow every rule that applies ===\n"
+        system_prompt += (presenter or "") + "\n=== END MEMORY RULES ==="
+        memory_note = ""
+        entry_text = ""
+    else:
+        system_prompt = driver.SYSTEM_PROMPT.format(
+            memory=str(memory_dir) if memory_dir else "(none)", entry=driver.ENTRY_FILE
+        )
+        if memory_dir:
+            memory_note = driver.MEMORY_PROMPT.format(memory=memory_dir, entry=memory_dir / driver.ENTRY_FILE)
+            entry_text = (memory_dir / driver.ENTRY_FILE).read_text()
+        else:
+            memory_note = driver.NO_MEMORY_PROMPT
             entry_text = ""
+        system_prompt = system_prompt + "\n\n" + memory_note
     if entry_text:
         system_prompt += f"\n\n{driver.ENTRY_FILE} content:\n\n{entry_text}"
-    if presenter:
+    if memory_mode != "inline" and presenter:
         system_prompt += f"\n\n{presenter}"
 
     messages = [
@@ -424,14 +431,32 @@ def main(argv: list[str] | None = None) -> int:
     memory_dir = None
     memory_used = False
     if args.arm == "memory":
-        memory_used = seed_memory(Path(args.memory), workdir)
-        memory_dir = workdir / "memory"
-        if not memory_used:
-            print(
-                "runner: memory folder has no usable MEMORY.md entry point; aborting",
-                file=sys.stderr,
-            )
-            return 2
+        memory_source = Path(args.memory) if args.memory else None
+        if args.memory_mode == "inline":
+            # memory lives in the prompt; no folder on disk
+            if memory_source is None or not (memory_source / "MEMORY.md").is_file():
+                print("runner: inline mode requires a memory folder to inject from", file=sys.stderr)
+                return 2
+            memory_used = True
+        elif args.memory_mode == "family":
+            # existing flow: seed the full folder, then prune to the family
+            memory_used = seed_memory(memory_source, workdir)
+            memory_dir = workdir / "memory"
+            if not memory_used:
+                print(
+                    "runner: memory folder has no usable MEMORY.md entry point; aborting",
+                    file=sys.stderr,
+                )
+                return 2
+        else:
+            memory_used = seed_memory(memory_source, workdir)
+            memory_dir = workdir / "memory"
+            if not memory_used:
+                print(
+                    "runner: memory folder has no usable MEMORY.md entry point; aborting",
+                    file=sys.stderr,
+                )
+                return 2
         memory_stats: dict = {}
         if args.memory_mode == "family":
             memory_stats = prune_memory_folder(memory_dir, resolve_family_id(spec))
@@ -472,6 +497,7 @@ def main(argv: list[str] | None = None) -> int:
             token_ceiling=args.token_ceiling,
             memory_mode=args.memory_mode,
             memory_stats=memory_stats,
+            memory_source=Path(args.memory) if args.memory else None,
         )
     except BudgetAbort:
         run = {"status": "budget-aborted"}
