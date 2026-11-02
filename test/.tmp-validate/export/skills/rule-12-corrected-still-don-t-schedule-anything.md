@@ -10,4 +10,4 @@ Pattern key: `corrected still don't schedule anything`  ·  Supporting trajector
 
 - Source: trajectory `claude-code-intro`, turn 13 (verifier result: unknown)
 
-<!-- exported as rule-02-corrected-still-don-t-schedule-anything.md -->
+<!-- exported as rule-12-corrected-still-don-t-schedule-anything.md -->

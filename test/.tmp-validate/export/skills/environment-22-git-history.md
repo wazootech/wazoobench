@@ -10,4 +10,4 @@ Pattern key: `git history`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 12 (verifier result: unknown)
 
-<!-- exported as environment-12-git-history.md -->
+<!-- exported as environment-22-git-history.md -->

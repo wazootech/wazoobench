@@ -10,4 +10,4 @@ Pattern key: `still don't schedule anything yet`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 13 (verifier result: unknown)
 
-<!-- exported as preference-05-still-don-t-schedule-anything-yet.md -->
+<!-- exported as preference-15-still-don-t-schedule-anything-yet.md -->

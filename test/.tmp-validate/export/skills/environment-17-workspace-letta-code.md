@@ -10,4 +10,4 @@ Pattern key: `workspace/letta-code`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 4 (verifier result: unknown)
 
-<!-- exported as environment-07-workspace-letta-code.md -->
+<!-- exported as environment-17-workspace-letta-code.md -->
