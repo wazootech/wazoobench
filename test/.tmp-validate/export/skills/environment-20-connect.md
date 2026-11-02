@@ -11,4 +11,4 @@ Pattern key: `connect`  ·  Supporting trajectories: 1
 - Source: trajectory `claude-code-intro`, turn 4 (verifier result: unknown)
 - Source: trajectory `claude-code-intro`, turn 12 (verifier result: unknown)
 
-<!-- exported as environment-10-connect.md -->
+<!-- exported as environment-20-connect.md -->

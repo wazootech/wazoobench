@@ -10,4 +10,4 @@ Pattern key: `corrected don't change anything.`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 3 (verifier result: unknown)
 
-<!-- exported as rule-01-corrected-don-t-change-anything.md -->
+<!-- exported as rule-03-corrected-don-t-change-anything.md -->

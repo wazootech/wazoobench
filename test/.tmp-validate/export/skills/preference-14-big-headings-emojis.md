@@ -10,4 +10,4 @@ Pattern key: `big headings emojis.`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 5 (verifier result: unknown)
 
-<!-- exported as preference-04-big-headings-emojis.md -->
+<!-- exported as preference-14-big-headings-emojis.md -->

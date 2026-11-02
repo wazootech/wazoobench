@@ -194,6 +194,29 @@ function mergeEvidence(a: Evidence[], b: Evidence[]): Evidence[] {
  * shortest phrasing wins (it tends to be the most general); the merged item
  * carries the union of all members' provenance.
  */
+/**
+ * Technical-symbol anchors: API/library names a claim's text cites. Two
+ * claims citing the same library symbols describe the same surface even when
+ * their phrasings share no content words — the phrasing-variance case that
+ * text-similarity clustering misses (observed: t0212's "returns an empty
+ * Word2Vec model" and t0643's "gensim raises RuntimeError on empty list"
+ * describe one contract from opposite sides; Jaccard never paired them, so
+ * the decisive empty-input rule stayed two singletons and the wazoobench
+ * t0505 regression happened because the memory never had the rule to teach).
+ */
+const SYMBOL_RE = /\b(?:[A-Z][A-Za-z0-9_]{2,}|[a-z][a-z0-9_]{3,})(?:_[a-z0-9_]+)?\b/g
+const NOISE_SYMBOLS = new Set([
+  "the", "and", "for", "with", "that", "this", "from", "into", "when", "then",
+  "user", "assistant", "agent", "solution", "task_func", "model", "file",
+  "files", "directory", "string", "strings", "list", "test", "tests", "error",
+  "should", "must", "requires", "require", "using", "used", "words", "word",
+])
+export function symbolAnchors(text: string): Set<string> {
+  const raw = text.match(SYMBOL_RE) ?? []
+  const cleaned = raw.map((x) => x.toLowerCase()).filter((x) => !NOISE_SYMBOLS.has(x) && x.length >= 4)
+  return new Set(cleaned)
+}
+
 export function consolidateSimilar<T extends Consolidatable>(items: T[], threshold = 0.75): T[] {
   const kept: T[] = []
   const keptTokens: Set<string>[] = []
@@ -201,7 +224,19 @@ export function consolidateSimilar<T extends Consolidatable>(items: T[], thresho
     const tokens = stemmedTokens(item.text)
     let twinIndex = -1
     for (let i = 0; i < kept.length; i++) {
-      if (setSimilarity(keptTokens[i], tokens) >= threshold) {
+      const jaccard = setSimilarity(keptTokens[i], tokens)
+      if (jaccard >= threshold) {
+        twinIndex = i
+        break
+      }
+      // Symbol-anchor rescue: same API symbols + one claim asserts what to
+      // do while the other asserts the failure it avoids → same contract,
+      // two phrasings. Merge regardless of content-word overlap.
+      const keptAnchors = symbolAnchors(kept[i].text)
+      const itemAnchors = symbolAnchors(item.text)
+      const anchorOverlap = [...keptAnchors].filter((x) => itemAnchors.has(x))
+      const hasCorrectionSignal = CORRECTION_RE.test(item.text) || CORRECTION_RE.test(kept[i].text)
+      if (keptAnchors.size > 0 && anchorOverlap.length >= 2 && hasCorrectionSignal) {
         twinIndex = i
         break
       }
@@ -397,6 +432,41 @@ function toEvidence(bindings: ClaimBinding[]): Evidence[] {
   return evidence
 }
 
+/**
+ * Symbol-anchor pre-clustering: merge exact-key clusters whose texts share
+ * >= 2 technical-symbol anchors (library/API names). A PASS "do this" claim
+ * and a FAIL "the API raises when..." claim describe one contract from
+ * opposite sides with disjoint phrasings; exact-phrase keys split them into
+ * singletons and the decisive rule never forms (wazoobench t0505 regression:
+ * the empty-input rule lived as two singletons, so the memory had nothing to
+ * teach about the corpus's recorded failure).
+ */
+export function clusterBySymbolAnchors(
+  bindings: ClaimBinding[],
+  keyOf: (b: ClaimBinding) => string
+): Map<string, ClaimBinding[]> {
+  const exact = cluster(bindings, keyOf)
+  const reps = [...exact.entries()].map(([key, group]) => ({
+    key,
+    group,
+    anchors: symbolAnchors(group[0]?.claimText ?? ""),
+  }))
+  const merged: { key: string; group: ClaimBinding[] }[] = []
+  for (const rep of reps) {
+    const target = merged.find((m) => {
+      const mAnchors = symbolAnchors(m.group[0]?.claimText ?? "")
+      const overlap = [...rep.anchors].filter((x) => mAnchors.has(x))
+      return mAnchors.size > 0 && overlap.length >= 2
+    })
+    if (target) {
+      target.group.push(...rep.group)
+    } else {
+      merged.push({ key: rep.key, group: [...rep.group] })
+    }
+  }
+  return new Map(merged.map((m) => [m.key, m.group]))
+}
+
 function cluster(
   bindings: ClaimBinding[],
   keyOf: (b: ClaimBinding) => string
@@ -483,9 +553,18 @@ export function buildDreamReport(bindings: ClaimBinding[]): DreamReport {
   }
 
   // --- task rules: corrections and avoidance rules, FAIL-weighted -----------
-  const correctionBindings = bindings.filter((b) => CORRECTION_RE.test(b.claimText))
+  // API-surface rescue: claims citing >= 2 technical symbols carry contract
+  // knowledge even without correction phrasing (t0212 "returns an empty
+  // Word2Vec model when no tokens remain" + t0643 "gensim raises RuntimeError
+  // on an empty sentence list" — the decisive empty-input contract, phrased
+  // with no don't/never/instead in either claim; CORRECTION_RE dropped both
+  // and the rule never formed, so the memory couldn't teach the corpus's
+  // recorded failure — wazoobench t0505 regression's actual root cause).
+  const correctionBindings = bindings.filter(
+    (b) => CORRECTION_RE.test(b.claimText) || symbolAnchors(b.claimText).size >= 2
+  )
   const taskRules = [
-    ...cluster(
+    ...clusterBySymbolAnchors(
       correctionBindings,
       (b) => `${b.action ?? "instructs"} ${normalizePatternKey(b.object ?? b.claimText, 4)}`
     ).entries(),

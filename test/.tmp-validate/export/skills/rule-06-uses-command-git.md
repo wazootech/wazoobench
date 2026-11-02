@@ -1,13 +1,13 @@
 # - **MemFS:** the agent's context is tracked in git and can sync to your own GitHub repo.
 
-**Use when:** Use when locating files, configs, or commands in this environment.
+**Use when:** Use when performing the task, before acting — these are working rules the user enforced.
 
 - **MemFS:** the agent's context is tracked in git and can sync to your own GitHub repo.
 
-Pattern key: `git`  ·  Supporting trajectories: 1
+Pattern key: `uses command git`  ·  Supporting trajectories: 1
 
 ## Provenance
 
 - Source: trajectory `claude-code-intro`, turn 4 (verifier result: unknown)
 
-<!-- exported as environment-09-git.md -->
+<!-- exported as rule-06-uses-command-git.md -->
