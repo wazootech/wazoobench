@@ -10,4 +10,4 @@ Pattern key: `workspace`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 2 (verifier result: unknown)
 
-<!-- exported as environment-06-workspace.md -->
+<!-- exported as environment-16-workspace.md -->

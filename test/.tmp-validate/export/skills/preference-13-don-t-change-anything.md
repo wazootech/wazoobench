@@ -10,4 +10,4 @@ Pattern key: `don't change anything.`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 3 (verifier result: unknown)
 
-<!-- exported as preference-03-don-t-change-anything.md -->
+<!-- exported as preference-13-don-t-change-anything.md -->

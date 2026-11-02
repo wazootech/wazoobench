@@ -10,4 +10,4 @@ Pattern key: `bun run`  ·  Supporting trajectories: 1
 
 - Source: trajectory `claude-code-intro`, turn 4 (verifier result: unknown)
 
-<!-- exported as environment-11-bun-run.md -->
+<!-- exported as environment-21-bun-run.md -->
