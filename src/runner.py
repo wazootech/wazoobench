@@ -439,15 +439,18 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             memory_used = True
         elif args.memory_mode == "family":
-            # existing flow: seed the full folder, then prune to the family
-            memory_used = seed_memory(memory_source, workdir)
-            memory_dir = workdir / "memory"
-            if not memory_used:
-                print(
-                    "runner: memory folder has no usable MEMORY.md entry point; aborting",
-                    file=sys.stderr,
-                )
-                return 2
+            # existing flow: seed the full folder, then prune to the family.
+            # The CONTROL arm has no memory: skip seeding, same as pointer mode
+            # (seed_memory(None) returns False and would abort the run).
+            if memory_source is not None:
+                memory_used = seed_memory(memory_source, workdir)
+                memory_dir = workdir / "memory"
+                if not memory_used:
+                    print(
+                        "runner: memory folder has no usable MEMORY.md entry point; aborting",
+                        file=sys.stderr,
+                    )
+                    return 2
         else:
             # pointer mode: seed the full folder. The CONTROL arm has no
             # memory at all — skip seeding (seed_memory(None) returns False
