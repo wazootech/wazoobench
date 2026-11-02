@@ -77,7 +77,7 @@ def prep_workdir(spec: dict, workdir: Path) -> bool:
 
 
 def run_task(spec: dict, arm: str, memory: Path | None, workdir: Path, model: str, out: Path,
-             max_turns: int, token_ceiling: int) -> dict:
+             max_turns: int, token_ceiling: int, memory_mode: str = "folder") -> dict:
     # spec files are named <trajId>-<slug>.json
     matches = sorted(TASKS.glob(f"{spec['trajId']}-*.json"))
     spec_path = matches[0]
@@ -93,6 +93,8 @@ def run_task(spec: dict, arm: str, memory: Path | None, workdir: Path, model: st
     ]
     if memory is not None:
         cmd += ["--memory", str(memory)]
+        if memory_mode != "folder":
+            cmd += ["--memory-mode", memory_mode]
     env = dict(os.environ)
     if not env.get("DEEPSEEK_API_KEY"):
         # "sentinel" only works when the subprocess rides the Skydive egress
@@ -193,6 +195,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="shared train-only memory folder (regenerate per docs/data-split.json if missing)")
     parser.add_argument("--max-turns", type=int, default=30)
     parser.add_argument("--token-ceiling", type=int, default=400_000)
+    parser.add_argument(
+        "--memory-mode", choices=["folder", "family", "inline"], default="folder",
+        help="memory delivery interface (iter3): folder = full-index dump; "
+        "family = family-sectioned memory; inline = presenter injection",
+    )
     parser.add_argument("--list", action="store_true", help="print the READY/blocked split and exit (no API spend)")
     args = parser.parse_args(argv)
 
@@ -255,7 +262,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"eval: [{index}/{len(ready)}] {spec['trajId']} arm={arm} ...", flush=True)
             result = run_task(spec, arm, memory if arm == "memory" else None,
                               workdir, args.model, result_path,
-                              args.max_turns, args.token_ceiling)
+                              args.max_turns, args.token_ceiling,
+                              memory_mode=args.memory_mode)
             results.append(result)
             (out_dir / "results.json").write_text(json.dumps(results, indent=2))
     (out_dir / "report.md").write_text(

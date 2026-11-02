@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -92,6 +93,129 @@ def seed_memory(memory_source: Path | None, workdir: Path) -> bool:
     return driver.entry_index(target)
 
 
+# --- memory delivery modes (iteration 3) ------------------------------------
+#
+# iter2 finding: the memory arm read MEMORY.md but opened ZERO skill files
+# (the pointers were never followed) and the control beat the memory arm
+# 3/3 vs 2/3 at the 800k ceiling. The memory is present but inert — a
+# delivery-interface problem. Two candidate fixes, selected by --memory-mode:
+#
+#   folder (default) = iter2 behavior: full MEMORY.md dumped into the prompt
+#   family           = librarian fix: seed only the task family's sections
+#                      plus their referenced skill files
+#   inline           = presenter fix: no full-index dump; the family's rules
+#                      go straight into the system prompt as imperatives
+#
+# Both fixes reuse the same spec-family -> section mapping.
+
+FAMILY_TO_SECTION = {
+    "word2vec-pipeline": "Word2Vec pipeline builder",
+    "dapt-pcap-network-stats": "DAPT pcap network stats",
+    "algotune-optimization": "Solver speedup optimization",
+    "agentic-mcp-sheets": "Agentic MCP workplace (world server)",
+    # READY-set tasks whose spec family is "unassigned" are code-issue
+    # solving, which the memory's repo-work family covers.
+    "unassigned": "Repo work conventions",
+}
+GENERAL_SECTION = "General working rules"
+
+
+def resolve_family_id(spec: dict) -> str:
+    return spec.get("family") or "unassigned"
+
+
+def _split_sections(md_text: str) -> dict[str, str]:
+    """Split MEMORY.md on '## ' headers into {title: body} (header excluded)."""
+    sections: dict[str, str] = {}
+    title: str | None = None
+    lines: list[str] = []
+    for line in md_text.splitlines():
+        if line.startswith("## "):
+            if title is not None:
+                sections[title] = "\n".join(lines).strip()
+            title = line[3:].strip()
+            lines = []
+        elif title is not None:
+            lines.append(line)
+    if title is not None:
+        sections[title] = "\n".join(lines).strip()
+    return sections
+
+
+def family_sections(md_text: str, family_id: str) -> list[tuple[str, str]]:
+    """The sections that apply to this task family, in file order.
+
+    Always ends with the general rules section (when present).
+    """
+    sections = _split_sections(md_text)
+    wanted = FAMILY_TO_SECTION.get(family_id)
+    picked: list[tuple[str, str]] = []
+    for title, text in sections.items():
+        if title == GENERAL_SECTION:
+            continue
+        if wanted is not None and title == wanted:
+            picked.append((title, text))
+    if GENERAL_SECTION in sections:
+        picked.append((GENERAL_SECTION, sections[GENERAL_SECTION]))
+    return picked
+
+
+def prune_memory_folder(memory_root: Path, family_id: str) -> dict:
+    """Family mode: rewrite memory/MEMORY.md to the family's sections and
+    drop skill files they don't reference. Mutates the seeded copy only.
+    """
+    entry = memory_root / driver.ENTRY_FILE
+    md_text = entry.read_text()
+    picked = family_sections(md_text, family_id)
+    # keep the original preamble (everything before the first '## ')
+    preamble = md_text.split("\n## ", 1)[0].strip()
+    kept_titles = {t for t, _ in picked}
+    retained = [preamble]
+    for title, text in picked:
+        retained.append(f"## {title}\n\n{text}")
+    new_md = "\n\n".join(retained) + "\n"
+    entry.write_text(new_md)
+    # prune skills/ to files the retained sections reference
+    skills_dir = memory_root / "skills"
+    kept_files = set()
+    for _title, text in picked:
+        for match in re.findall(r"skills/[A-Za-z0-9._/-]+\.md", text):
+            kept_files.add(match.split("/", 1)[1])
+    removed = 0
+    total = 0
+    if skills_dir.is_dir():
+        for path in sorted(skills_dir.rglob("*.md")):
+            total += 1
+            if path.name not in kept_files:
+                path.unlink()
+                removed += 1
+    return {
+        "full_entry_chars": len(md_text),
+        "retained_chars": len(new_md),
+        "sections_kept": sorted(kept_titles),
+        "skills_kept": total - removed,
+        "skills_total": total,
+    }
+
+
+def inline_presenter_block(memory_root: Path, family_id: str) -> str:
+    """Inline mode: the family's sections injected directly into the system
+    prompt as imperatives. Provenance stays on disk; nothing is dumped twice.
+    """
+    md_text = (memory_root / driver.ENTRY_FILE).read_text()
+    picked = family_sections(md_text, family_id)
+    if not picked:
+        return ""
+    lines = [
+        "The following memory rules apply to THIS task. Treat them as standing",
+        "instructions: follow them unless the task explicitly overrides them.",
+        f"Provenance for each rule lives under {memory_root}/skills/.",
+    ]
+    for title, text in picked:
+        lines += ["", f"## {title}", "", text]
+    return "\n".join(lines)
+
+
 def run_agent(
     spec: dict,
     workdir: Path,
@@ -102,6 +226,8 @@ def run_agent(
     max_turns: int = 30,
     token_ceiling: int = DEFAULT_TOKEN_CEILING,
     completion_marker: str = DEFAULT_COMPLETION_MARKER,
+    memory_mode: str = "folder",
+    memory_stats: dict | None = None,
 ) -> dict:
     """The deepseek_driver loop, in-process, with a token ceiling."""
     instruction = spec["prompt"]
@@ -115,8 +241,17 @@ def run_agent(
         memory_note = driver.NO_MEMORY_PROMPT
         entry_text = ""
     system_prompt = system_prompt + "\n\n" + memory_note
+    presenter = ""
+    if memory_mode == "inline" and memory_dir:
+        # presenter model: skip the full entry-text dump, inject the relevant
+        # sections directly instead
+        presenter = inline_presenter_block(memory_dir, resolve_family_id(spec))
+        if presenter:
+            entry_text = ""
     if entry_text:
         system_prompt += f"\n\n{driver.ENTRY_FILE} content:\n\n{entry_text}"
+    if presenter:
+        system_prompt += f"\n\n{presenter}"
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -234,6 +369,8 @@ def run_agent(
         "turns": len(steps),
         "tokens": usage,
         "memory_seeded": bool(memory_dir),
+        "memory_mode": memory_mode,
+        "memory_stats": memory_stats or {},
         "memory_use_events": memory_use,
         "transcript": messages,
     }
@@ -251,6 +388,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--token-ceiling", type=int, default=DEFAULT_TOKEN_CEILING)
     parser.add_argument("--api-base", default=driver.DEFAULT_API_BASE)
     parser.add_argument("--env", default="DEEPSEEK_API_KEY", help="env var holding the API key")
+    parser.add_argument(
+        "--memory-mode",
+        choices=["folder", "family", "inline"],
+        default="folder",
+        help="memory delivery interface (iter3): folder = iter2 full-index "
+        "dump; family = seed only the task family's sections; inline = "
+        "presenter model, rules injected straight into the system prompt",
+    )
     args = parser.parse_args(argv)
 
     api_key = os.environ.get(args.env)
@@ -287,6 +432,31 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
+        memory_stats: dict = {}
+        if args.memory_mode == "family":
+            memory_stats = prune_memory_folder(memory_dir, resolve_family_id(spec))
+            print(
+                "runner: family mode pruned memory "
+                f"({memory_stats['retained_chars']}/{memory_stats['full_entry_chars']} chars, "
+                f"skills {memory_stats['skills_kept']}/{memory_stats['skills_total']})",
+                flush=True,
+            )
+        elif args.memory_mode == "inline":
+            presenter = inline_presenter_block(memory_dir, resolve_family_id(spec))
+            if not presenter:
+                print(
+                    "runner: inline mode matched no memory sections; aborting "
+                    "(a presenter run with an empty block is just the control arm)",
+                    file=sys.stderr,
+                )
+                return 2
+            memory_stats = {
+                "full_entry_chars": len((memory_dir / driver.ENTRY_FILE).read_text()),
+                "retained_chars": len(presenter),
+                "sections_kept": [t for t, _ in family_sections(
+                    (memory_dir / driver.ENTRY_FILE).read_text(), resolve_family_id(spec)
+                )],
+            }
 
     # (c) run the agent loop in-process.
     started = time.monotonic()
@@ -300,6 +470,8 @@ def main(argv: list[str] | None = None) -> int:
             memory_dir,
             max_turns=args.max_turns,
             token_ceiling=args.token_ceiling,
+            memory_mode=args.memory_mode,
+            memory_stats=memory_stats,
         )
     except BudgetAbort:
         run = {"status": "budget-aborted"}
