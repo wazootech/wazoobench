@@ -261,14 +261,27 @@ def run_agent(
     instruction = spec["prompt"]
     presenter = ""
     if memory_mode == "inline":
-        # presenter model: rules injected directly; no folder exists, so no
-        # pointer in the prompt (pointing at "(none)" would contradict the
-        # injected rules).
-        if memory_source is not None:
-            presenter = inline_presenter_block(memory_source, resolve_family_id(spec))
-        system_prompt = driver.SYSTEM_PROMPT.format(memory="(injected below)", entry="(injected below)")
+        # presenter model, hybrid delivery (the iter3-4 lesson): the rules go
+        # into the prompt AND the memory folder is seeded into the workdir so
+        # skill references resolve. The injected block names the CONCRETE
+        # seeded path. Pure injection without the folder left the agent
+        # hunting for files that did not exist (t0505, presenter-A/B first
+        # attempt: 3/3 FAIL); pure pointer delivery left the memory unread
+        # (iter2: zero skill opens).
+        if memory_dir is None and memory_source is not None:
+            seed_memory(memory_source, workdir)
+            memory_dir = workdir / "memory"
+        if memory_dir is not None:
+            presenter = inline_presenter_block(memory_dir, resolve_family_id(spec))
+        system_prompt = driver.SYSTEM_PROMPT.format(
+            memory=str(memory_dir) if memory_dir else "(none)", entry=driver.ENTRY_FILE
+        )
         system_prompt += "\n\n=== MEMORY RULES — distilled from similar past tasks; follow every rule that applies ===\n"
         system_prompt += (presenter or "") + "\n=== END MEMORY RULES ==="
+        system_prompt += (
+            f"\nThe full memory folder (skills/ provenance files) is at {memory_dir}.\n"
+            if memory_dir else ""
+        )
         memory_note = ""
         entry_text = ""
     else:
