@@ -201,7 +201,16 @@ def prune_memory_folder(memory_root: Path, family_id: str) -> dict:
 def inline_presenter_block(memory_root: Path, family_id: str) -> str:
     """Inline mode: the family's sections injected directly into the system
     prompt as imperatives. Provenance stays on disk; nothing is dumped twice.
+
+    Prefers the memory's own presenter.md (pre-rendered at export — the
+    export-side presenter layer) when present; falls back to rendering
+    MEMORY.md sections inline for folders that predate the presenter file.
     """
+    presenter_file = memory_root / "presenter.md"
+    if presenter_file.is_file():
+        blocks = presenter_blocks(presenter_file.read_text(), family_id)
+        if blocks:
+            return blocks
     md_text = (memory_root / driver.ENTRY_FILE).read_text()
     picked = family_sections(md_text, family_id)
     if not picked:
@@ -214,6 +223,24 @@ def inline_presenter_block(memory_root: Path, family_id: str) -> str:
     for title, text in picked:
         lines += ["", f"## {title}", "", text]
     return "\n".join(lines)
+
+
+def presenter_blocks(presenter_text: str, family_id: str) -> str:
+    """Extract the matching family block (plus the general block) from a
+    presenter.md rendered by the export's renderPresenter()."""
+    import re
+    from functools import partial
+    names_path = Path(__file__).resolve().parent.parent / "docs" / "family-names.json"
+    names = json.loads(names_path.read_text()) if names_path.is_file() else {}
+    target = names.get(family_id)
+    sections = _split_sections(presenter_text)
+    parts: list[str] = []
+    for title, body in sections.items():
+        if title.startswith("Family: ") and target and title[8:].strip() == target:
+            parts.append(f"## {title}\n\n{body}")
+        elif title == "Family: General working rules (all tasks)":
+            parts.append(f"## {title}\n\n{body}")
+    return "\n\n".join(parts)
 
 
 def run_agent(
