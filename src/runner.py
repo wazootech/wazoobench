@@ -449,14 +449,18 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 2
         else:
-            memory_used = seed_memory(memory_source, workdir)
-            memory_dir = workdir / "memory"
-            if not memory_used:
-                print(
-                    "runner: memory folder has no usable MEMORY.md entry point; aborting",
-                    file=sys.stderr,
-                )
-                return 2
+            # pointer mode: seed the full folder. The CONTROL arm has no
+            # memory at all — skip seeding (seed_memory(None) returns False
+            # and would abort the run).
+            if memory_source is not None:
+                memory_used = seed_memory(memory_source, workdir)
+                memory_dir = workdir / "memory"
+                if not memory_used:
+                    print(
+                        "runner: memory folder has no usable MEMORY.md entry point; aborting",
+                        file=sys.stderr,
+                    )
+                    return 2
         memory_stats: dict = {}
         if args.arm == "memory" and args.memory_mode == "family":
             memory_stats = prune_memory_folder(memory_dir, resolve_family_id(spec))
@@ -467,7 +471,9 @@ def main(argv: list[str] | None = None) -> int:
                 flush=True,
             )
         elif args.arm == "memory" and args.memory_mode == "inline":
-            presenter = inline_presenter_block(memory_dir, resolve_family_id(spec))
+            # inline mode never seeded a folder; the presenter reads the
+            # SOURCE memory (memory_dir is None here by design).
+            presenter = inline_presenter_block(memory_source, resolve_family_id(spec))
             if not presenter:
                 print(
                     "runner: inline mode matched no memory sections; aborting "
@@ -476,7 +482,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 2
             memory_stats = {
-                "full_entry_chars": len((memory_dir / driver.ENTRY_FILE).read_text()),
+                "full_entry_chars": len((memory_source / driver.ENTRY_FILE).read_text()),
                 "retained_chars": len(presenter),
                 "sections_kept": [t for t, _ in family_sections(
                     (memory_dir / driver.ENTRY_FILE).read_text(), resolve_family_id(spec)
