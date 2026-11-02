@@ -458,7 +458,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 2
         memory_stats: dict = {}
-        if args.memory_mode == "family":
+        if args.arm == "memory" and args.memory_mode == "family":
             memory_stats = prune_memory_folder(memory_dir, resolve_family_id(spec))
             print(
                 "runner: family mode pruned memory "
@@ -466,7 +466,7 @@ def main(argv: list[str] | None = None) -> int:
                 f"skills {memory_stats['skills_kept']}/{memory_stats['skills_total']})",
                 flush=True,
             )
-        elif args.memory_mode == "inline":
+        elif args.arm == "memory" and args.memory_mode == "inline":
             presenter = inline_presenter_block(memory_dir, resolve_family_id(spec))
             if not presenter:
                 print(
