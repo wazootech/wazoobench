@@ -31,15 +31,8 @@ import urllib.request
 from pathlib import Path
 
 # The driver loop to reuse, verbatim.
-DRIVER_PATH = Path(
-    os.environ.get(
-        "WAZOO_DRIVER_PATH",
-        str(Path.home() / "workspace/wazoo-frontiermemory/adapter/deepseek_driver.py"),
-    )
-)
-if str(DRIVER_PATH.parent) not in sys.path:
-    sys.path.insert(0, str(DRIVER_PATH.parent))
-
+# The driver loop lives IN this repo now (the archived wazoo-frontiermemory
+# dependency died with the workspace recycle).
 import deepseek_driver as driver  # noqa: E402
 
 import verifiers  # noqa: E402
