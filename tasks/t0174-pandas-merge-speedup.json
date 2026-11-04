@@ -21,7 +21,7 @@
       "the benchmark harness (verbatim in the prompt) is the verifier's measurement and equivalence instrument",
       "baseline: unmodified repo merges ~0.29s on the corpus hardware; optimized single-key monotonic fast path ~0.004s"
     ],
-    "setupScript": "set -e; rm -rf pandas-dev__pandas; git clone --depth 50 https://github.com/pandas-dev/pandas pandas-dev__pandas; cd pandas-dev__pandas; python3 -m pip install --break-system-packages -q virtualenv; python3 -m virtualenv -q .venv --python=python3.11; source .venv/bin/activate; pip install -q numpy python-dateutil pytz tzdata pytest 'meson-python' 'meson>=1.2.3' ninja 'Cython>3.1.0,<4' 'setuptools<70' wheel versioneer tomli packaging pyproject_metadata || pip install -q numpy --index-url https://pypi.org/simple/ --trusted-host pypi.org; pip install -e . --no-build-isolation --no-deps -q; python -c 'import pandas; print(\"pandas rebuilt:\", pandas.__version__)'"
+    "setupScript": "set -e; rm -rf pandas-dev__pandas; git clone --depth 50 https://github.com/pandas-dev/pandas pandas-dev__pandas; cd pandas-dev__pandas; python3 -m pip install --break-system-packages -q virtualenv; python3 -m virtualenv -q .venv --python=python3.11; source .venv/bin/activate; pip install -q numpy python-dateutil pytz tzdata pytest 'meson-python' 'meson>=1.2.3' ninja 'Cython>3.1.0,<4' 'setuptools<70' wheel versioneer tomli packaging pyproject_metadata 2>/dev/null || tar xf ~/Documents/wazoobench-build-deps.tar -C .venv/lib/python3.11/site-packages/; pip install -e . --no-build-isolation --no-deps -q; python -c 'import pandas; print(\"pandas rebuilt:\", pandas.__version__)'"
   },
   "verifier": {
     "type": "algotune-speedup-check",
