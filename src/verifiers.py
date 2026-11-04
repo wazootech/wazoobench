@@ -32,6 +32,14 @@ def _run_command(command: str, workdir: Path, timeout: int = 1800) -> dict:
     for extra in ("/usr/local/go/bin", str(Path.home() / ".bun/bin")):
         if Path(extra).is_dir() and extra not in env.get("PATH", ""):
             env["PATH"] = f"{extra}:{env.get('PATH', '')}"
+    # the workdir's venv (if the task's setup created one) must be on PATH —
+    # its python is what the contract commands need (t0174: `python` resolves
+    # to the .venv python only after `source .venv/bin/activate`, which the
+    # command itself does, but bash -c starts a fresh shell where the
+    # activate's PATH export must carry the venv's bin FIRST)
+    venv_bin = str(Path(workdir) / "pandas-dev__pandas" / ".venv" / "bin")
+    if os.path.isdir(venv_bin):
+        env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
     proc = subprocess.run(
         ["bash", "-c", command], capture_output=True, text=True, cwd=str(workdir), timeout=timeout, env=env
     )
