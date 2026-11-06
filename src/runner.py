@@ -451,6 +451,21 @@ def main(argv: list[str] | None = None) -> int:
     memory_dir = None
     memory_used = False
     memory_stats: dict = {}
+    # (b0) repo-task setup: clone the task's repo at its pinned commit into
+    # the workdir (all 6 repo tasks need this; no container required).
+    repo_cfg = (spec.get("environment") or {}).get("repo")
+    if repo_cfg:
+        clone_cmds = [
+            f"git clone --quiet {repo_cfg['url']} {repo_cfg.get('dir', 'repo')}",
+            f"cd {repo_cfg.get('dir', 'repo')} && git checkout --quiet {repo_cfg['commit']}",
+        ]
+        import subprocess as _sp
+        for cmd in clone_cmds:
+            proc = _sp.run(["bash", "-c", cmd], capture_output=True, text=True, cwd=str(workdir))
+            if proc.returncode != 0:
+                print(f"runner: repo setup failed: {proc.stderr[-300:]}", file=sys.stderr)
+                return 2
+        print(f"runner: repo cloned at {repo_cfg['commit']}", file=sys.stderr)
     if args.arm == "memory":
         memory_source = Path(args.memory) if args.memory else None
         if args.memory_mode == "inline":
