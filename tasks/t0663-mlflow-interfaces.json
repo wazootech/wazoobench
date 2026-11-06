@@ -3,31 +3,60 @@
   "trajId": "t0663",
   "family": "unassigned",
   "archetype": "cli-exact-interface",
-  "tags": ["task", "environment"],
+  "tags": [
+    "task",
+    "environment"
+  ],
   "title": "Implement MLflow Unity-Catalog model-registry interfaces",
   "sourceTrajectory": {
     "outcome": "FAIL",
-    "failures": "the run completed all five interfaces by its own account but the verifier failed; ruff version-pin mismatch (0.14.5 vs pinned 0.12.10) obscured the local lint signal — the agent concluded 'not a code issue' and stopped",
+    "failures": "the run completed all five interfaces by its own account but the verifier failed; ruff version-pin mismatch (0.14.5 vs pinned 0.12.10) obscured the local lint signal \u2014 the agent concluded 'not a code issue' and stopped",
     "goldMemoryRef": "n/a (unassigned family)"
   },
-  "prompt": "Implement the following MLflow interfaces under `/testbed`, matching each signature exactly; the test suite imports and exercises them through the Unity Catalog model-registry REST store.\n\nPath: `/testbed/mlflow/utils/_unity_catalog_utils.py`\n\n```python\ndef uc_model_version_tag_from_mlflow_tags(tags: list[ModelVersionTag] | None) -> list[ProtoModelVersionTag]: ...\ndef uc_registered_model_tag_from_mlflow_tags(tags: list[RegisteredModelTag] | None) -> list[ProtoRegisteredModelTag]: ...\n```\n- Convert each input tag object to the corresponding Unity Catalog protobuf tag object, preserving key/value pairs. Return an empty list when `tags` is `None`.\n\n[remaining interface specs per the source trajectory: Dataset class in /testbed/mlflow/data/dataset.py, model registry helpers, schema types — full spec in the task prompt]",
+  "prompt": "Implement the following MLflow interfaces under `/testbed`, matching each signature exactly; the test suite imports and exercises them through the Unity Catalog model-registry REST store.\n\nPath: `/testbed/mlflow/utils/_unity_catalog_utils.py`\n\n```python\ndef uc_model_version_tag_from_mlflow_tags(tags: list[ModelVersionTag] | None) -> list[ProtoModelVersionTag]: ...\ndef uc_registered_model_tag_from_mlflow_tags(tags: list[RegisteredModelTag] | None) -> list[ProtoRegisteredModelTag]: ...\n```\n- Convert each input tag object to the corresponding Unity Catalog protobuf tag object, preserving key/value pairs. Return an empty list when `tags` is `None`.\n\n[remaining interface specs per the source trajectory: Dataset class in /testbed/mlflow/data/dataset.py, model registry helpers, schema types \u2014 full spec in the task prompt]",
   "environment": {
     "container": "mlflow testbed (public repo clone at the pinned commit + test deps)",
     "setup": "clone mlflow at the trajectory's base commit; the trajectory's own venv layout: /opt/miniconda3/envs/testbed/bin/python",
     "memoryDependentFacts": [
-      "testbed python lives at /opt/miniconda3/envs/testbed/bin/python (not default python3 — which lacks pytest AND project deps)",
+      "testbed python lives at /opt/miniconda3/envs/testbed/bin/python (not default python3 \u2014 which lacks pytest AND project deps)",
       "ruff is pinned to 0.12.10 in the env; a 0.14.5 mismatch produces 'ruff failed' noise the agent must not chase",
-      "the test suite imports through the Unity Catalog model-registry REST store — interface correctness is graded by import + exercise, not by lint"
-    ]
+      "the test suite imports through the Unity Catalog model-registry REST store \u2014 interface correctness is graded by import + exercise, not by lint"
+    ],
+    "repo": {
+      "url": "https://github.com/mlflow/mlflow",
+      "dir": "repo"
+    },
+    "setupScript": "set -e; git clone --quiet --depth 50 https://github.com/mlflow/mlflow repo; cd repo; git config user.name wazoobench; git config user.email bench@wazoo.dev; echo repo-ready"
   },
   "verifier": {
     "type": "pytest-subset",
     "checks": [
-      {"name": "interfaces_import", "spec": "the five modules import cleanly under the testbed python"},
-      {"name": "signature_exactness", "spec": "each function matches the required signature (inspect.signature equality)"},
-      {"name": "none_returns_empty_list", "spec": "uc_*_tag_from_mlflow_tags(None) returns [] (the explicit spec case)"},
-      {"name": "tag_conversion_preserves_pairs", "spec": "key/value pairs survive conversion for both model-version and registered-model tags"},
-      {"name": "test_suite_subset", "spec": "the trajectory's own exercised test subset passes (the corpus recorded the suite; we pin the exact tests)"}
+      {
+        "name": "interfaces_import",
+        "spec": "the five modules import cleanly under the testbed python"
+      },
+      {
+        "name": "signature_exactness",
+        "spec": "each function matches the required signature (inspect.signature equality)"
+      },
+      {
+        "name": "none_returns_empty_list",
+        "spec": "uc_*_tag_from_mlflow_tags(None) returns [] (the explicit spec case)"
+      },
+      {
+        "name": "tag_conversion_preserves_pairs",
+        "spec": "key/value pairs survive conversion for both model-version and registered-model tags"
+      },
+      {
+        "name": "test_suite_subset",
+        "spec": "the trajectory's own exercised test subset passes (the corpus recorded the suite; we pin the exact tests)"
+      },
+      {
+        "name": "repo_ready",
+        "locallyVerified": true,
+        "spec": "mlflow clones, unity-catalog tests discoverable",
+        "command": "cd repo && find tests -name '*unity*' | head -2"
+      }
     ]
   },
   "memoryDependency": {
