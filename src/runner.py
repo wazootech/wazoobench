@@ -457,8 +457,11 @@ def main(argv: list[str] | None = None) -> int:
     if repo_cfg:
         clone_cmds = [
             f"git clone --quiet {repo_cfg['url']} {repo_cfg.get('dir', 'repo')}",
-            f"cd {repo_cfg.get('dir', 'repo')} && git checkout --quiet {repo_cfg['commit']}",
         ]
+        if repo_cfg.get('commit'):
+            clone_cmds.append(
+                f"cd {repo_cfg.get('dir', 'repo')} && git checkout --quiet {repo_cfg['commit']}"
+            )
         import subprocess as _sp
         for cmd in clone_cmds:
             proc = _sp.run(["bash", "-c", cmd], capture_output=True, text=True, cwd=str(workdir))
