@@ -1,0 +1,48 @@
+name: code-health
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: File length (warn-only while existing files are split; 120 src / 300 test; blank, comment, import and re-export lines excluded)
+        run: |
+          # Counts code lines. Skips blank/comment lines and import / export-from
+          # statements, including ones a formatter wrapped over several lines
+          # (from a line opening `import`, `export {` or `export *` until the
+          # line holding `from "..."`). A plain `export { a, b };` or
+          # `export const` never swallows code.
+          cat > "$RUNNER_TEMP/count.awk" <<'AWK'
+          inimp { if ($0 ~ /from[ \t]*["'][^"']+["'];?[ \t]*$/ || $0 ~ /^[ \t]*\}/) inimp = 0; next }
+          /^[ \t]*(import[ \t]|export[ \t]+(type[ \t]+)?(\{|\*))/ {
+            if ($0 !~ /from[ \t]*["'][^"']+["'];?[ \t]*$/ && $0 !~ /^[ \t]*import[ \t]*["']/ && $0 !~ /\}/) inimp = 1
+            next
+          }
+          /^[ \t]*($|\/\/|\/\*|\*)/ { next }
+          { n++ }
+          END { print n + 0 }
+          AWK
+          ALLOW=''
+          : > "$RUNNER_TEMP/over"
+          git ls-files '*.ts' '*.tsx' '*.js' '*.mjs' \
+            | grep -vE '(^|/)(node_modules|dist|generated|fixtures|\.next)/|\.d\.ts$|\.gen\.|openapi|snapshot|schema' \
+            | while read -r f; do
+                n=$(awk -f "$RUNNER_TEMP/count.awk" "$f")
+                case "$f" in *.test.*|*.spec.*|*/tests/*|tests/*) max=300;; *) max=120;; esac
+                if [ "$n" -gt "$max" ]; then
+                  case " $ALLOW " in *" $f "*) echo "allowlisted: $f: $n (limit $max)";; *)
+                    echo "::warning file=$f::$n lines of code (limit $max)"; echo "- \`$f\`: $n (limit $max)" >> "$GITHUB_STEP_SUMMARY"; echo "$f" >> "$RUNNER_TEMP/over";;
+                  esac
+                fi
+              done
+          if [ -s "$RUNNER_TEMP/over" ]; then echo "Files over the length limit (see above); warn-only."; fi
+      - name: TODO/FIXME without an issue link (warn-only)
+        run: |
+          git grep -nE '\b(TODO|FIXME)\b' -- '*.ts' '*.tsx' '*.js' '*.mjs' ':!*generated*' \
+            | grep -vE '#[0-9]+|/issues/[0-9]+' \
+            | while IFS=: read -r f l _; do echo "::warning file=$f,line=$l::TODO/FIXME without an issue link"; done || true

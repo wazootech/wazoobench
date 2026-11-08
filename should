@@ -1,8 +1,0 @@
-a anchors: [ "trained", "word2vec", "deterministic", "settings", "workers", "seed", "returns",
-  "empty", "tokens", "remain"
-]
-b anchors: [
-  "gensim", "word2vec", "raises", "runtimeerror", "first", "build", "vocabulary", "before", "training",
-  "given", "empty", "sentence"
-]
-overlap: [ "word2vec", "empty" ]
