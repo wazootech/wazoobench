@@ -97,5 +97,6 @@
   "memoryDependency": {
     "withoutMemory": "the conventions (preprocessing regex, stopwords source, min_count=1, empty-input behavior) are UNSTATED in the prompt \u2014 'this task's established preprocessing conventions' is the deliberate vagueness; agent must guess or fail",
     "withMemory": "memory's word2vec-pipeline family carries the exact conventions from the train trajectories + the known-failures entry for empty input"
-  }
+  },
+  "tokenCeiling": 1600000
 }

@@ -71,5 +71,6 @@
   },
   "concerns": [
     "grading runs hidden verifier tests in the task container; contract is fully prompt-pinned"
-  ]
+  ],
+  "tokenCeiling": 1600000
 }

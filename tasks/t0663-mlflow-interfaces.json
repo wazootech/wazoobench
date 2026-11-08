@@ -62,5 +62,6 @@
   "memoryDependency": {
     "withoutMemory": "testbed python path, ruff version pin, and the REST-store grading basis are environment facts the agent must discover by trial (the FAIL trajectory wasted turns chasing the ruff mismatch)",
     "withMemory": "repo-work-conventions + general families carry testbed-layout and tool-availability facts; the ruff trap is a known-failure species"
-  }
+  },
+  "tokenCeiling": 1600000
 }

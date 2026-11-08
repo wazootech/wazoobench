@@ -106,6 +106,7 @@ FAMILY_TO_SECTION = {
     "dapt-pcap-network-stats": "DAPT pcap network stats",
     "algotune-optimization": "Solver speedup optimization",
     "agentic-mcp-sheets": "Agentic MCP workplace (world server)",
+    "repo-work-conventions": "Repo work conventions",
     # READY-set tasks whose spec family is "unassigned" are code-issue
     # solving, which the memory's repo-work family covers.
     "unassigned": "Repo work conventions",
@@ -201,13 +202,17 @@ def inline_presenter_block(memory_root: Path, family_id: str) -> str:
     """
     presenter_file = memory_root / "presenter.md"
     if presenter_file.is_file():
-        blocks = presenter_blocks(presenter_file.read_text(), family_id)
+        blocks = presenter_blocks(presenter_text := presenter_file.read_text(), family_id)
         if blocks:
             return blocks
     md_text = (memory_root / driver.ENTRY_FILE).read_text()
     picked = family_sections(md_text, family_id)
     if not picked:
         return ""
+    # Same shrink rule as presenter_blocks: when a task-family section
+    # matched, the general block is dropped rather than paid for every turn.
+    if len(picked) > 1:
+        picked = [(t, x) for t, x in picked if t != GENERAL_SECTION]
     lines = [
         "The following memory rules apply to THIS task. Treat them as standing",
         "instructions: follow them unless the task explicitly overrides them.",
@@ -219,21 +224,30 @@ def inline_presenter_block(memory_root: Path, family_id: str) -> str:
 
 
 def presenter_blocks(presenter_text: str, family_id: str) -> str:
-    """Extract the matching family block (plus the general block) from a
-    presenter.md rendered by the export's renderPresenter()."""
+    """Extract the matching family block (plus the general block when no
+    family block exists) from a presenter.md rendered by the export's
+    renderPresenter()."""
     import re
     from functools import partial
     names_path = Path(__file__).resolve().parent.parent / "docs" / "family-names.json"
     names = json.loads(names_path.read_text()) if names_path.is_file() else {}
-    target = names.get(family_id)
+    # "unassigned" specs are repo/issue work, which the memory's
+    # repo-work-conventions family covers (same mapping FAMILY_TO_SECTION uses).
+    target = names.get("repo-work-conventions" if family_id == "unassigned" else family_id)
     sections = _split_sections(presenter_text)
-    parts: list[str] = []
+    family_parts: list[str] = []
+    general_part: str = ""
     for title, body in sections.items():
         if title.startswith("Family: ") and target and title[8:].strip() == target:
-            parts.append(f"## {title}\n\n{body}")
+            family_parts.append(f"## {title}\n\n{body}")
         elif title == "Family: General working rules (all tasks)":
-            parts.append(f"## {title}\n\n{body}")
-    return "\n\n".join(parts)
+            general_part = f"## {title}\n\n{body}"
+    # Shrink the injection (wazoobench#7): the family block is where the
+    # task-specific rules live, so when a family block matched, the general
+    # block is dropped rather than paid for on every turn.
+    if family_parts:
+        return "\n\n".join(family_parts)
+    return general_part
 
 
 def run_agent(
@@ -399,6 +413,7 @@ def run_agent(
         "memory_mode": memory_mode,
         "memory_stats": memory_stats or {},
         "memory_use_events": memory_use,
+        "injection_chars": len(presenter) if memory_mode == "inline" else 0,
         "transcript": messages,
     }
 
@@ -530,6 +545,14 @@ def main(argv: list[str] | None = None) -> int:
                 )],
             }
 
+    # Per-task ceiling override (wazoobench#6): the 800k default censors the
+    # memory arm on turn-heavy tasks (t0505 budget-aborted at 52 turns while
+    # control finished at 41). A spec may pin its own ceiling via
+    # "tokenCeiling"; the CLI flag is the default for specs that don't.
+    token_ceiling = int(spec.get("tokenCeiling") or args.token_ceiling)
+    if spec.get("tokenCeiling"):
+        print(f"runner: using per-task token ceiling {token_ceiling}", file=sys.stderr)
+
     # (c) run the agent loop in-process.
     started = time.monotonic()
     try:
@@ -541,7 +564,7 @@ def main(argv: list[str] | None = None) -> int:
             args.api_base,
             memory_dir,
             max_turns=args.max_turns,
-            token_ceiling=args.token_ceiling,
+            token_ceiling=token_ceiling,
             memory_mode=args.memory_mode,
             memory_stats=memory_stats,
             memory_source=Path(args.memory) if args.memory else None,
@@ -571,6 +594,7 @@ def main(argv: list[str] | None = None) -> int:
         "tokens": run.get("tokens", {}),
         "seconds": run["seconds"],
         "memoryUsed": memory_used,
+        "injection_chars": run.get("injection_chars", 0),
         "status": run.get("status", "completed"),
         "stop_reason": run.get("stop_reason"),
         "final_message": run.get("final_message", ""),
