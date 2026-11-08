@@ -22,6 +22,10 @@
  *                         pipeline). Preserves the extraction spend.
  *   --model-dir <dir>   local TFJS USE model dir for real vector search
  *                       (absent => deterministic hashing embeddings)
+ *   --consolidation-embedder <spec>  opt-in embedding consolidation in dream
+ *                       (hash | use:<dir> | ollama:<model> | openai:<model>;
+ *                       wazoobench#10). Off by default.
+ *   --consolidation-threshold <x>    cosine merge threshold (default 0.85)
  *
  * Inside the benchmark sandbox only the memory model's API host is
  * reachable, and only the extraction phase talks to it. Nothing here
@@ -35,6 +39,7 @@ import { loadCorpus } from "./corpus"
 import { extractClaimsForTrajectory } from "./extraction"
 import { importGraph } from "./graph"
 import { dream } from "./dream"
+import { loadEmbedder } from "./embedders"
 import { exportMemory, type ExportOptions } from "./export"
 import {
   readDreamState,
@@ -57,6 +62,8 @@ export interface CliArgs {
   modelDir?: string
   /** Skip extraction; load claims.json from --state (written by a prior ingest). */
   resumeFromClaims: boolean
+  consolidationEmbedder?: string
+  consolidationThreshold: number
 }
 
 const USAGE = `usage: bun run src/index.ts <ingest|dream|export|all> --corpus <dir> --out <dir>`
@@ -89,6 +96,8 @@ export function parseArgs(argv: string[]): CliArgs {
         "fallback-only": { type: "boolean", default: false },
         "resume-from-claims": { type: "boolean", default: false },
         "model-dir": { type: "string" },
+        "consolidation-embedder": { type: "string" },
+        "consolidation-threshold": { type: "string", default: "0.85" },
       },
     })
   } catch (error) {
@@ -104,7 +113,9 @@ export function parseArgs(argv: string[]): CliArgs {
     | "concurrency"
     | "model-dir"
     | "fallback-only"
-    | "resume-from-claims",
+    | "resume-from-claims"
+    | "consolidation-embedder"
+    | "consolidation-threshold",
     string | boolean | undefined
   >
   const [phase] = parsed.positionals
@@ -121,6 +132,9 @@ export function parseArgs(argv: string[]): CliArgs {
     fallbackOnly: Boolean(values["fallback-only"]),
     resumeFromClaims: Boolean(values["resume-from-claims"]),
     modelDir: values["model-dir"] === undefined ? undefined : String(values["model-dir"]),
+    consolidationEmbedder:
+      values["consolidation-embedder"] === undefined ? undefined : String(values["consolidation-embedder"]),
+    consolidationThreshold: Number(values["consolidation-threshold"]),
   }
 }
 
@@ -184,7 +198,10 @@ async function runDream(args: CliArgs, state?: IngestState): Promise<void> {
     claims: ingestState.claims,
     modelDir: args.modelDir,
   })
-  const report = await dream(client, ingestState.claims)
+  const consolidation = args.consolidationEmbedder
+    ? { embedder: await loadEmbedder(args.consolidationEmbedder), threshold: args.consolidationThreshold }
+    : undefined
+  const report = await dream(client, ingestState.claims, { consolidation })
   const path = await writeDreamState(args.state, report)
   console.log(
     `dream: ${report.taskRules.length} task rules, ${report.userPreferences.length} user preferences, ${report.environmentFacts.length} environment facts -> ${path}`

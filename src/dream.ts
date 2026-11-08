@@ -21,6 +21,7 @@
  * phrased three slightly different ways surfaces once.
  */
 
+import { consolidateByEmbedding, type TextEmbedder } from "./embedding-consolidation"
 import type { SearchRequest, SearchResponse, SparqlRequest, SparqlResponse } from "@worlds/sdk"
 import { SPARQL_PREFIXES, type Outcome } from "./ontology"
 import type { Claim, ClaimType, Extractor } from "./extraction"
@@ -55,6 +56,8 @@ export interface DreamReport {
     pass: number
     fail: number
     unknown: number
+    /** Merges made by the opt-in embedding pass; absent when it did not run. */
+    embeddingMerges?: number
   }
 }
 
@@ -162,7 +165,7 @@ export function jaccardSimilarity(a: string, b: string): number {
   return setSimilarity(stemmedTokens(a), stemmedTokens(b))
 }
 
-interface Consolidatable {
+export interface Consolidatable {
   key: string
   text: string
   evidence: Evidence[]
@@ -171,7 +174,7 @@ interface Consolidatable {
 }
 
 /** Union two items' provenance, deduplicated per (trajectory, turn). */
-function mergeEvidence(a: Evidence[], b: Evidence[]): Evidence[] {
+export function mergeEvidence(a: Evidence[], b: Evidence[]): Evidence[] {
   const seen = new Set<string>()
   const merged: Evidence[] = []
   for (const e of [...a, ...b].sort(
@@ -644,7 +647,20 @@ export function buildDreamReport(bindings: ClaimBinding[]): DreamReport {
  * plus one hybrid (keyword + vector) search pass per pattern kind to surface
  * near-duplicate phrasings the exact-match clusters missed.
  */
-export async function dream(client: DreamClient, claims: Claim[]): Promise<DreamReport> {
+export interface DreamOptions {
+  /**
+   * Opt-in embedding consolidation (wazoobench#10), run after the lexical
+   * pass on task rules and user preferences. Environment facts are excluded:
+   * they are path/config facts where topical similarity is not sameness.
+   */
+  consolidation?: { embedder: TextEmbedder; threshold: number }
+}
+
+export async function dream(
+  client: DreamClient,
+  claims: Claim[],
+  options: DreamOptions = {}
+): Promise<DreamReport> {
   let bindings: ClaimBinding[]
   try {
     bindings = await selectClaimBindings(client)
@@ -667,6 +683,14 @@ export async function dream(client: DreamClient, claims: Claim[]): Promise<Dream
   }
 
   const report = buildDreamReport(bindings)
+  if (options.consolidation) {
+    const { embedder, threshold } = options.consolidation
+    const rules = await consolidateByEmbedding(report.taskRules, embedder, threshold)
+    const prefs = await consolidateByEmbedding(report.userPreferences, embedder, threshold)
+    report.taskRules = rules.items
+    report.userPreferences = prefs.items
+    report.stats.embeddingMerges = rules.merges.length + prefs.merges.length
+  }
 
   // Hybrid search sanity pass: each pattern kind must return at least one hit
   // on its own vocabulary. Recorded in stats via a non-fatal probe.
