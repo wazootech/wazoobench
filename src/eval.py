@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import os
 import subprocess
 import sys
@@ -37,6 +38,48 @@ DRIVER_PATH = Path(
 )
 
 WORKER = Path(__file__).resolve().parent / "runner.py"
+
+
+
+SECRET_ENV_NAMES = {
+    "DEEPSEEK_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+    "GH_TOKEN", "GITHUB_TOKEN", "WORLDS_PLATFORM_TOKEN", "WORLDS_TOKEN",
+    "HUGGINGFACE_TOKEN", "MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET",
+    "ANYONE_SANDBOX_TOKEN", "SKYDIVE_SANDBOX_TOKEN", "GT_API_KEY",
+    "OPENHACK_API_KEY", "ASSEMBLYAI_API_KEY",
+}
+
+
+def redact_secrets(text: str) -> str:
+    """Scrub secret material out of persisted run outputs.
+
+    The eval agent sometimes runs probe commands (env, printenv, cat) whose
+    output lands verbatim in results.json; on 2026-11-06 that captured a
+    live DeepSeek key into a public commit. Match known secret env names
+    AND the common key shapes, so an unknown-but-shaped secret still gets
+    caught.
+    """
+    if not isinstance(text, str):
+        return text
+    for name in SECRET_ENV_NAMES:
+        text = text.replace(f"{name}=", f"{name}=[REDACTED]")
+    # Bearer tokens, sk- keys, and JWTs regardless of variable name
+    text = re.sub(r"sk-[A-Za-z0-9]{16,}", "sk-[REDACTED]", text)
+    text = re.sub(r"Bearer\s+[A-Za-z0-9_\-.]{16,}", "Bearer [REDACTED]", text)
+    text = re.sub(r"eyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}",
+                  "[REDACTED-JWT]", text)
+    return text
+
+
+def redact_result(result: dict) -> dict:
+    """Apply redact_secrets to every string field (recursively)."""
+    if isinstance(result, dict):
+        return {k: redact_result(v) for k, v in result.items()}
+    if isinstance(result, list):
+        return [redact_result(v) for v in result]
+    if isinstance(result, str):
+        return redact_secrets(result)
+    return result
 
 
 def load_specs() -> list[dict]:
@@ -266,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
                               workdir, args.model, result_path,
                               args.max_turns, args.token_ceiling,
                               memory_mode=args.memory_mode)
+            result = redact_result(result)
             if arm == "memory" and args.memory_mode != "folder":
                 result["arm"] = f"memory-{args.memory_mode}"
             results.append(result)
