@@ -604,6 +604,9 @@ def main(argv: list[str] | None = None) -> int:
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    # Scrub secret material before persisting: bash_outputs can contain the
+    # eval agent's own probe commands (env dumps). See eval.redact_secrets.
+    from eval import redact_result  # fail-closed: no write without the scrubber
     out.write_text(json.dumps(result, indent=2))
     passed = sum(check["passed"] for check in checks)
     print(
