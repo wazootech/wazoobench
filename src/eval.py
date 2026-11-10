@@ -109,6 +109,19 @@ def is_ready(spec: dict) -> tuple[bool, str]:
 
 def prep_workdir(spec: dict, workdir: Path) -> bool:
     """Set the workdir up per the spec's setupScript. Returns success."""
+    # The eval agent's bash cwd is /workspace (deepseek_driver), which is
+    # SHARED across runs in this sandbox. A stale solution.py from a prior
+    # run pre-seeds the next run: the 11-10 acceptance rerun's agent read the
+    # old file, "verified" it, and reported success without writing anything.
+    # Start every run from a clean agent cwd.
+    agent_cwd = Path("/workspace")
+    if agent_cwd.is_dir():
+        import shutil as _shutil
+        for child in agent_cwd.iterdir():
+            if child.is_dir():
+                _shutil.rmtree(child)
+            else:
+                child.unlink()
     script = (spec.get("environment") or {}).get("setupScript")
     if not script:
         return False
