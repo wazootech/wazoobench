@@ -588,8 +588,20 @@ def main(argv: list[str] | None = None) -> int:
                "turns": 0, "tokens": {}, "memory_seeded": memory_used, "error": str(exc)}
     run["seconds"] = round(time.monotonic() - started, 1)
 
-    # (e) verifier.
-    checks = verifiers.run_checks(spec, workdir, run["final_message"])
+    # (e) verifier. The agent's bash cwd may differ from the workdir the
+    # verifier grades (t0505: the driver cds to /workspace while the verifier
+    # grades the workdir). Honor environment.agentCwd: run the verifier there
+    # and expose the workdir's check scripts from it, so the graded files are
+    # the files the agent actually wrote.
+    agent_cwd = (spec.get("environment") or {}).get("agentCwd")
+    verify_dir = workdir
+    if agent_cwd and os.path.isdir(agent_cwd):
+        verify_dir = Path(agent_cwd)
+        for src in workdir.iterdir():
+            dst = verify_dir / src.name
+            if not dst.exists():
+                dst.symlink_to(src)
+    checks = verifiers.run_checks(spec, verify_dir, run["final_message"])
 
     # (f) result JSON. Container-required checks are recorded as skipped and
     # don't gate `passed` — the run is graded only on what actually graded.

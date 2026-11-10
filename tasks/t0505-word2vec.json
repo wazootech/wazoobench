@@ -23,7 +23,8 @@
       "training params: vector_size=100, window=5, min_count=1 (single-occurrence words MUST get vectors), workers=4",
       "empty input: return untrained Word2Vec(vector_size=100) \u2014 never raise (the 10-run failure)"
     ],
-    "setupScript": "pip install --break-system-packages gensim nltk && python3 -c \"import nltk; nltk.download('stopwords', quiet=True)\""
+    "setupScript": "pip install --break-system-packages gensim nltk && python3 -c \"import nltk; nltk.download('stopwords', quiet=True)\"",
+    "agentCwd": "/workspace"
   },
   "verifier": {
     "type": "python-asserts",
