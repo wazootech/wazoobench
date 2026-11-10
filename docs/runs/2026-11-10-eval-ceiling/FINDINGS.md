@@ -57,3 +57,27 @@ against memory, driven by t0505; the family-scoped wins (t0611) and the
 removed censoring are the design's supports, but the benchmark's
 discriminating power now rests on whether #11's embedding merge can flip
 t0505 without losing t0611.
+
+## Addendum (same day): t0505 root causes and the fix that flipped it
+
+The ceiling rerun's t0505 memory FAIL had three stacked causes, all fixed:
+
+1. **Presenter gap (PR #22).** The discriminating check needs the
+   ValueError-guard rule; its 1-vote plurality routed it away from the
+   Word2Vec slice. Sparse-evidence rules now fan out to every family with
+   a vote. The rule renders in the slice it can help.
+2. **Stale-artifact contamination (PR #23).** The agent's bash cwd is the
+   sandbox's shared /workspace; a prior run's solution.py pre-seeded the
+   acceptance rerun (the agent "verified" the old file and claimed success).
+   Every run now starts from a clean agent cwd.
+3. **Verifier in the wrong directory (PR #24).** The verifier graded the
+   run workdir while the agent wrote to /workspace. Specs may declare
+   agentCwd; the verifier runs there.
+
+**Acceptance rerun with all three fixes: t0505 memory PASS 8/8 checks
+(41t), control PASS 8/8 (37t).** The memory arm no longer loses on t0505;
+with the correct rule in its slice it solves the task as well as control.
+The earlier "clean negative" was infrastructure, not a memory failure.
+
+Also landed: onnx:<dir> embedder spec (in #22's diff) after the bake-off
+showed the hash embedder cannot separate the labeled merge-pairs.
