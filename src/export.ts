@@ -39,6 +39,7 @@ import {
   FAMILIES,
   buildTrajectoryFamilies,
   classifyClaimText,
+  familiesForItem,
   familyForItem,
   familyForPreference,
   type Family,
@@ -376,21 +377,35 @@ export function organizeByFamily(
     failCautions: [],
   }
   const place = (item: DreamItem): void => {
-    const familyId = familyOf(item, item.kind)
-    const section = familyId ? byFamily.get(familyId) : undefined
-    if (!section) {
-      if (item.kind === "task-rule") general.rules.push(item)
-      else if (item.kind === "user-preference") general.preferences.push(item)
-      else general.envFacts.push(item)
-      return
+    // Evidence-family ties route the item into EVERY tied family: a rule
+    // backed evenly by two families' trajectories is evidence for both.
+    // Single-vote pluralities fall through to the singular family/general.
+    const tied = item.kind === "task-rule" ? familiesForItem(item, trajectoryFamilies) : []
+    const targets: FamilySection[] = []
+    for (const id of tied) {
+      const section = byFamily.get(id)
+      if (section) targets.push(section)
     }
-    if (item.kind === "task-rule") {
-      section.rules.push(item)
-      if (isMajorityFail(item)) section.knownFailures.push(item)
-    } else if (item.kind === "user-preference") {
-      section.preferences.push(item)
-    } else {
-      section.envFacts.push(item)
+    if (targets.length === 0) {
+      const familyId = familyOf(item, item.kind)
+      const section = familyId ? byFamily.get(familyId) : undefined
+      if (!section) {
+        if (item.kind === "task-rule") general.rules.push(item)
+        else if (item.kind === "user-preference") general.preferences.push(item)
+        else general.envFacts.push(item)
+        return
+      }
+      targets.push(section)
+    }
+    for (const section of targets) {
+      if (item.kind === "task-rule") {
+        section.rules.push(item)
+        if (isMajorityFail(item)) section.knownFailures.push(item)
+      } else if (item.kind === "user-preference") {
+        section.preferences.push(item)
+      } else {
+        section.envFacts.push(item)
+      }
     }
   }
   for (const item of rendered) place(item)
