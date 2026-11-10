@@ -490,7 +490,10 @@ def main(argv: list[str] | None = None) -> int:
             if proc.returncode != 0:
                 print(f"runner: repo setup failed: {proc.stderr[-300:]}", file=sys.stderr)
                 return 2
-        print(f"runner: repo cloned at {repo_cfg['commit']}", file=sys.stderr)
+        if repo_cfg.get("commit"):
+            print(f"runner: repo cloned at {repo_cfg['commit']}", file=sys.stderr)
+        else:
+            print("runner: repo clone ready (no pinned commit)", file=sys.stderr)
     if args.arm == "memory":
         memory_source = Path(args.memory) if args.memory else None
         if args.memory_mode == "inline":
