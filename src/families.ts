@@ -188,6 +188,37 @@ function pluralityFamily(tally: Map<string, number>): string | undefined {
 }
 
 /**
+ * All families tied at the plurality count, when that count has at least 2
+ * votes. A rule whose evidence splits evenly between two task families is
+ * evidence FOR both — routing it to only one (or to general) hid the
+ * ValueError-guard rule from the Word2Vec slice that needed it
+ * (wazoobench: the t0505 presenter gap, 2026-11-10).
+ */
+export function familiesForItem(
+  item: DreamItem,
+  trajectoryFamilies: Map<string, string | undefined>
+): string[] {
+  const tally = tallyEvidenceFamilies(item, trajectoryFamilies)
+  // How much of this rule's evidence even got a family?
+  let classified = 0
+  for (const evidence of item.evidence) {
+    if (trajectoryFamilies.get(evidence.trajId)) classified += 1
+  }
+  // When most of the evidence is unclassified, a 1-vote "plurality" is
+  // classification noise, not a family assignment: fan out to every family
+  // that has any vote so the rule reaches each task family it touched.
+  const sparse = classified * 2 < item.evidence.length
+  let bestCount = 0
+  for (const count of tally.values()) if (count > bestCount) bestCount = count
+  const floor = sparse ? 1 : 2
+  if (bestCount < floor) return []
+  return [...tally.entries()]
+    .filter(([, count]) => count === bestCount)
+    .map(([id]) => id)
+    .sort((a, b) => a.localeCompare(b))
+}
+
+/**
  * Family scoping for user preferences: a preference is family-owned only
  * when at least `share` (0.8) of its evidence trajectories sit in one
  * family; otherwise it renders in the general section.
