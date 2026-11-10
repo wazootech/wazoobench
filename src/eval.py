@@ -285,7 +285,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Same-day reruns must not reuse workdirs: a prior invocation's clone
+    # breaks the runner's repo setup ("destination path 'repo' already
+    # exists"). Number the directory per invocation.
     out_dir = RUNS / (f"{date}-eval" if args.memory_mode == "folder" else f"{date}-eval-{args.memory_mode}")
+    n = 2
+    while out_dir.exists() and any(out_dir.glob("workdir-*")):
+        out_dir = RUNS / (f"{date}-eval-{n}" if args.memory_mode == "folder" else f"{date}-eval-{args.memory_mode}-{n}")
+        n += 1
     out_dir.mkdir(parents=True, exist_ok=True)
     results: list[dict] = []
     for index, (spec, _why) in enumerate(ready, start=1):
