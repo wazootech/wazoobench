@@ -470,9 +470,16 @@ def main(argv: list[str] | None = None) -> int:
     # the workdir (all 6 repo tasks need this; no container required).
     repo_cfg = (spec.get("environment") or {}).get("repo")
     if repo_cfg:
-        clone_cmds = [
-            f"git clone --quiet {repo_cfg['url']} {repo_cfg.get('dir', 'repo')}",
-        ]
+        # The setupScript may have already cloned (it runs the full setup
+        # before the agent loop); only clone when the target is absent so a
+        # pre-existing clone is reused, not clobbered.
+        target = workdir / repo_cfg.get('dir', 'repo')
+        if target.is_dir() and (target / '.git').is_dir():
+            clone_cmds = []
+        else:
+            clone_cmds = [
+                f"git clone --quiet {repo_cfg['url']} {repo_cfg.get('dir', 'repo')}",
+            ]
         if repo_cfg.get('commit'):
             clone_cmds.append(
                 f"cd {repo_cfg.get('dir', 'repo')} && git checkout --quiet {repo_cfg['commit']}"
